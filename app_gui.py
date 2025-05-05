@@ -223,22 +223,20 @@ def format_time_srt(seconds):
     minutes %= 60
     return f"{hours:02}:{minutes:02}:{seconds:02},{millis:03}"
 
-def create_srt_content(translated_segments, start_offset_seconds=0.3):
-    """Generates SRT formatted string from translated segments, applying a start time offset."""
+def create_srt_content(translated_segments):
+    """Generates SRT formatted string from translated segments."""
     srt_content = ""
     for i, segment in enumerate(translated_segments):
-        # Apply offset to start time, ensuring it doesn't go below zero
-        adjusted_start = max(0, segment['start'] - start_offset_seconds)
-        # Keep end time as is, or optionally adjust it too if needed
-        # adjusted_end = max(adjusted_start + 0.1, segment['end'] - start_offset_seconds) # Example: ensure end is after start
+        # Remove the start time offset calculation
+        start_time = segment['start']
         end_time = segment['end']
 
-        # Ensure start time is not later than end time after adjustment
-        if adjusted_start >= end_time:
-             adjusted_start = end_time - 0.1 # Make start slightly before end if overlap/inversion occurs
-             adjusted_start = max(0, adjusted_start) # Ensure it's still not negative
+        # Ensure start time is not negative (shouldn't happen with Whisper, but good practice)
+        start_time = max(0, start_time)
+        # Ensure end time is after start time
+        end_time = max(start_time, end_time)
 
-        start_str = format_time_srt(adjusted_start)
+        start_str = format_time_srt(start_time)
         end_str = format_time_srt(end_time)
         text = segment['text']
         srt_content += f"{i+1}\n"
@@ -424,7 +422,8 @@ class AppGUI:
             self.generate_button.config(state=tk.NORMAL)
             return
 
-        self.log_status("Creating SRT content with start time adjustment...")
+        self.log_status("Creating SRT content...") # Removed 'with start time adjustment'
+        # Call create_srt_content without the offset argument
         srt_result = create_srt_content(translated_segments)
         self.log_status("SRT content created.")
 
