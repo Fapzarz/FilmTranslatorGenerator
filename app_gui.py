@@ -7,9 +7,20 @@ from faster_whisper import WhisperModel # Import faster_whisper
 import google.generativeai as genai
 import time # To create unique filenames
 import re # Import regex for parsing batch response
+import json # <-- Add json import
+import torch # Import torch for model loading/unloading logic
+import gc # Import gc for garbage collection
 
-# --- Language List ---
-# Add more languages as needed
+# --- Configuration File ---
+CONFIG_FILE = "config.json"
+
+# --- Constants ---
+WHISPER_MODELS = ["tiny", "base", "small", "medium", "large-v2", "large-v3"]
+DEVICES = ["cuda", "cpu"]
+COMPUTE_TYPES = {
+    "cuda": ["float16", "int8_float16", "int8"], # Common types for CUDA
+    "cpu": ["int8", "float32"] # Common types for CPU
+}
 LANGUAGES = [
     "English", "Indonesian", "Spanish", "French", "German",
     "Japanese", "Chinese", "Korean", "Russian", "Portuguese",
@@ -250,52 +261,153 @@ class AppGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Film Translator Generator")
-        self.root.geometry("600x550") # Adjusted size
+        self.root.geometry("650x650") # Adjusted size for new options
+
+        # --- Model & Device Settings Variables ---
+        self.whisper_model_name_var = tk.StringVar()
+        self.device_var = tk.StringVar()
+        self.compute_type_var = tk.StringVar()
+        # -----------------------------------------
 
         self.video_path = tk.StringVar()
         self.api_key = tk.StringVar()
-        self.target_language = tk.StringVar(value="English") # Default target language
+        self.target_language = tk.StringVar()
         self.whisper_model = None # Initialize whisper_model as None
-        self.whisper_model_name = "large-v2" # Changed model
-        self.compute_type = "float16" # Use float16 for RTX 3070
-        self.device = "cuda" # Use GPU
 
         # --- Widgets ---
+        row_idx = 0
         # File Selection
-        tk.Label(root, text="Video File:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        tk.Entry(root, textvariable=self.video_path, width=50).grid(row=0, column=1, padx=5, pady=5, sticky="ew")
-        tk.Button(root, text="Browse...", command=self.browse_file).grid(row=0, column=2, padx=5, pady=5)
+        tk.Label(root, text="Video File:").grid(row=row_idx, column=0, padx=5, pady=5, sticky="w")
+        tk.Entry(root, textvariable=self.video_path, width=60).grid(row=row_idx, column=1, padx=5, pady=5, sticky="ew")
+        tk.Button(root, text="Browse...", command=self.browse_file).grid(row=row_idx, column=2, padx=5, pady=5)
+        row_idx += 1
 
         # API Key
-        tk.Label(root, text="Gemini API Key:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
-        tk.Entry(root, textvariable=self.api_key, width=50, show="*").grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        tk.Label(root, text="Gemini API Key:").grid(row=row_idx, column=0, padx=5, pady=5, sticky="w")
+        tk.Entry(root, textvariable=self.api_key, width=60, show="*").grid(row=row_idx, column=1, padx=5, pady=5, sticky="ew")
+        row_idx += 1
 
-        # Target Language (Changed to Combobox)
-        tk.Label(root, text="Target Language:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
-        self.language_combobox = ttk.Combobox(root, textvariable=self.target_language, values=LANGUAGES, state="readonly")
-        self.language_combobox.grid(row=2, column=1, padx=5, pady=5, sticky="w")
-        self.language_combobox.set("English") # Set default value
+        # Target Language
+        tk.Label(root, text="Target Language:").grid(row=row_idx, column=0, padx=5, pady=5, sticky="w")
+        self.language_combobox = ttk.Combobox(root, textvariable=self.target_language, values=LANGUAGES, state="readonly", width=15)
+        self.language_combobox.grid(row=row_idx, column=1, padx=5, pady=5, sticky="w")
+        row_idx += 1
+
+        # --- Whisper Settings --- 
+        settings_frame = tk.LabelFrame(root, text="Whisper Settings", padx=5, pady=5)
+        settings_frame.grid(row=row_idx, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
+        row_idx += 1
+
+        tk.Label(settings_frame, text="Model:").grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        self.model_combobox = ttk.Combobox(settings_frame, textvariable=self.whisper_model_name_var, values=WHISPER_MODELS, state="readonly", width=12)
+        self.model_combobox.grid(row=0, column=1, padx=5, pady=2, sticky="w")
+
+        tk.Label(settings_frame, text="Device:").grid(row=0, column=2, padx=5, pady=2, sticky="w")
+        self.device_combobox = ttk.Combobox(settings_frame, textvariable=self.device_var, values=DEVICES, state="readonly", width=8)
+        self.device_combobox.grid(row=0, column=3, padx=5, pady=2, sticky="w")
+        self.device_combobox.bind("<<ComboboxSelected>>", self.update_compute_types) # Update compute types on device change
+
+        tk.Label(settings_frame, text="Compute Type:").grid(row=0, column=4, padx=5, pady=2, sticky="w")
+        self.compute_type_combobox = ttk.Combobox(settings_frame, textvariable=self.compute_type_var, state="readonly", width=10)
+        self.compute_type_combobox.grid(row=0, column=5, padx=5, pady=2, sticky="w")
+        # ------------------------
 
         # Action Button
         self.generate_button = tk.Button(root, text="Generate Subtitles", command=self.start_processing)
-        self.generate_button.grid(row=3, column=0, columnspan=3, padx=5, pady=10)
+        self.generate_button.grid(row=row_idx, column=0, columnspan=3, padx=5, pady=10)
+        row_idx += 1
 
         # Status/Log Area
-        tk.Label(root, text="Status:").grid(row=4, column=0, padx=5, pady=5, sticky="nw")
-        self.status_text = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=10, width=70)
-        self.status_text.grid(row=5, column=0, columnspan=3, padx=5, pady=5, sticky="nsew")
-        self.status_text.configure(state='disabled') # Make read-only initially
+        tk.Label(root, text="Status:").grid(row=row_idx, column=0, padx=5, pady=5, sticky="nw")
+        row_idx += 1
+        self.status_text = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=10, width=80)
+        self.status_text.grid(row=row_idx, column=0, columnspan=3, padx=5, pady=5, sticky="nsew")
+        self.status_text.configure(state='disabled')
+        row_idx += 1
 
-        # SRT Output Area (Optional: could be a save button instead)
-        tk.Label(root, text="SRT Output:").grid(row=6, column=0, padx=5, pady=5, sticky="nw")
-        self.srt_output_text = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=10, width=70)
-        self.srt_output_text.grid(row=7, column=0, columnspan=3, padx=5, pady=5, sticky="nsew")
+        # SRT Output Area
+        tk.Label(root, text="SRT Output:").grid(row=row_idx, column=0, padx=5, pady=5, sticky="nw")
+        row_idx += 1
+        self.srt_output_text = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=10, width=80)
+        self.srt_output_text.grid(row=row_idx, column=0, columnspan=3, padx=5, pady=5, sticky="nsew")
         self.srt_output_text.configure(state='disabled')
 
         # Configure grid resizing
         self.root.grid_columnconfigure(1, weight=1)
-        self.root.grid_rowconfigure(5, weight=1) # Status area expands
-        self.root.grid_rowconfigure(7, weight=1) # SRT area expands
+        self.root.grid_rowconfigure(row_idx-2, weight=1) # Status area expands
+        self.root.grid_rowconfigure(row_idx, weight=1) # SRT area expands
+
+        # --- Load Config and Set Initial State --- 
+        self._load_config()
+        self.update_compute_types() # Set initial compute types based on loaded/default device
+        # -----------------------------------------
+
+    def update_compute_types(self, event=None):
+        """Updates the compute type combobox based on the selected device."""
+        selected_device = self.device_var.get()
+        valid_compute_types = COMPUTE_TYPES.get(selected_device, [])
+        self.compute_type_combobox['values'] = valid_compute_types
+        # Try to keep the current selection if valid, otherwise set to the first valid type
+        current_compute_type = self.compute_type_var.get()
+        if current_compute_type not in valid_compute_types:
+            if valid_compute_types:
+                self.compute_type_var.set(valid_compute_types[0])
+            else:
+                self.compute_type_var.set("") # Clear if no valid types
+
+    def _load_config(self):
+        """Loads configuration from config.json."""
+        defaults = {
+            'gemini_api_key': '',
+            'target_language': 'English',
+            'whisper_model': 'large-v2',
+            'device': 'cuda' if torch.cuda.is_available() else 'cpu', # Smarter default device
+            'compute_type': 'float16' if torch.cuda.is_available() else 'int8' # Smarter default compute
+        }
+        try:
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, 'r') as f:
+                    config_data = json.load(f)
+                # Use loaded value or default if key is missing
+                self.api_key.set(config_data.get('gemini_api_key', defaults['gemini_api_key']))
+                self.target_language.set(config_data.get('target_language', defaults['target_language']))
+                self.whisper_model_name_var.set(config_data.get('whisper_model', defaults['whisper_model']))
+                self.device_var.set(config_data.get('device', defaults['device']))
+                self.compute_type_var.set(config_data.get('compute_type', defaults['compute_type']))
+                self.log_status("Loaded settings from config.")
+            else:
+                # Set defaults if config file doesn't exist
+                self.api_key.set(defaults['gemini_api_key'])
+                self.target_language.set(defaults['target_language'])
+                self.whisper_model_name_var.set(defaults['whisper_model'])
+                self.device_var.set(defaults['device'])
+                self.compute_type_var.set(defaults['compute_type'])
+                self.log_status("Config file not found, using defaults.")
+
+        except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
+            self.log_status(f"Warning: Could not load config file: {e}. Using defaults.")
+            # Ensure defaults are set even on error
+            self.api_key.set(defaults['gemini_api_key'])
+            self.target_language.set(defaults['target_language'])
+            self.whisper_model_name_var.set(defaults['whisper_model'])
+            self.device_var.set(defaults['device'])
+            self.compute_type_var.set(defaults['compute_type'])
+
+    def _save_config(self):
+        """Saves current configuration to config.json."""
+        try:
+            config_data = {
+                'gemini_api_key': self.api_key.get(),
+                'target_language': self.target_language.get(),
+                'whisper_model': self.whisper_model_name_var.get(),
+                'device': self.device_var.get(),
+                'compute_type': self.compute_type_var.get()
+            }
+            with open(CONFIG_FILE, 'w') as f:
+                json.dump(config_data, f, indent=4)
+            # self.log_status("Saved settings to config.") # Optional log
+        except Exception as e:
+            self.log_status(f"Warning: Could not save config file: {e}")
 
     def browse_file(self):
         filepath = filedialog.askopenfilename(
@@ -350,19 +462,41 @@ class AppGUI:
                 messagebox.showerror("Save Error", f"Failed to save SRT file: {e}")
 
     def _load_whisper_model_sync(self):
-        """Loads the faster-whisper model synchronously, updating status. Returns True on success."""
-        if self.whisper_model:
+        """Loads the faster-whisper model based on selected settings."""
+        # Get current settings from GUI
+        model_name = self.whisper_model_name_var.get()
+        device = self.device_var.get()
+        compute_type = self.compute_type_var.get()
+
+        # Check if model needs reloading (different settings or not loaded)
+        if self.whisper_model and \
+           self.whisper_model.model == model_name and \
+           self.whisper_model.device == device and \
+           self.whisper_model.compute_type == compute_type:
+            self.log_status("Whisper model already loaded with correct settings.")
             return True
 
-        self.log_status(f"Loading/Downloading faster-whisper model ('{self.whisper_model_name}')...")
-        self.log_status(f"(Device: {self.device}, Compute Type: {self.compute_type})")
-        self.log_status("(This might take a while on first run, especially for large models...)")
+        # Release previous model if settings changed
+        if self.whisper_model:
+            self.log_status("Releasing previous Whisper model due to setting change...")
+            try:
+                del self.whisper_model
+                self.whisper_model = None
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+                self.log_status("Previous model released.")
+            except Exception as e:
+                self.log_status(f"Warning: Error releasing previous model - {e}")
+
+        self.log_status(f"Loading/Downloading faster-whisper model ('{model_name}')...")
+        self.log_status(f"(Device: {device}, Compute Type: {compute_type})")
+        self.log_status("(This might take a while on first run or model change...)")
         try:
-            # Load using faster_whisper.WhisperModel
             self.whisper_model = WhisperModel(
-                self.whisper_model_name,
-                device=self.device,
-                compute_type=self.compute_type
+                model_name, # Use selected model name
+                device=device, # Use selected device
+                compute_type=compute_type # Use selected compute type
             )
             self.log_status("Faster-Whisper model loaded successfully.")
             return True
@@ -404,11 +538,18 @@ class AppGUI:
             self.generate_button.config(state=tk.NORMAL)
             return
 
+        # --- Save Current Settings --- 
+        self._save_config()
+        # -----------------------------
+
+        # --- Load Whisper Model (uses selected settings) ---
         if not self._load_whisper_model_sync():
             self.log_status("--- Process Failed (Whisper Model Load) ---")
             self.generate_button.config(state=tk.NORMAL)
             return
+        # ---------------------------------------------------
 
+        # --- 1. Transcribe (uses the loaded self.whisper_model) ---
         transcribed_segments = transcribe_video(self.whisper_model, video_file, self.log_status)
 
         if not transcribed_segments:
@@ -416,14 +557,15 @@ class AppGUI:
             self.generate_button.config(state=tk.NORMAL)
             return
 
+        # --- 2. Translate ---
         translated_segments = translate_text_gemini(api_key_val, transcribed_segments, target_lang_val, self.log_status)
         if not translated_segments:
             self.log_status("--- Process Failed (Translation) ---")
             self.generate_button.config(state=tk.NORMAL)
             return
 
-        self.log_status("Creating SRT content...") # Removed 'with start time adjustment'
-        # Call create_srt_content without the offset argument
+        # --- 3. Create SRT ---
+        self.log_status("Creating SRT content...")
         srt_result = create_srt_content(translated_segments)
         self.log_status("SRT content created.")
 

@@ -1,14 +1,16 @@
-# Film Translator Generator
+# Film Translator Generator v1.1
 
 Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunakan Faster-Whisper dan menerjemahkan teksnya menggunakan Google Gemini API untuk menghasilkan file subtitle (.srt).
 
 ## Fitur
 
 *   Antarmuka pengguna grafis (GUI) menggunakan Tkinter (`app_gui.py`).
-*   Transkripsi video menggunakan model `large-v2` dari Faster-Whisper (dioptimalkan untuk kecepatan).
+*   **Pilihan Model Whisper:** Pilih antara `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3`.
+*   **Pilihan Perangkat & Komputasi:** Pilih `cuda` atau `cpu` dan tipe komputasi yang sesuai (`float16`, `int8`, dll.).
+*   **Penyimpanan Pengaturan:** API Key, model, perangkat, tipe komputasi, dan bahasa target terakhir disimpan di `config.json`.
+*   Transkripsi video menggunakan Faster-Whisper.
 *   Terjemahan teks menggunakan Google Gemini API (`gemini-2.5-flash-preview-04-17`).
 *   Mengirim teks ke Gemini dalam batch untuk efisiensi.
-*   Penyesuaian waktu mulai subtitle untuk mengurangi *delay*.
 *   Pemilihan bahasa target terjemahan melalui dropdown.
 *   Menghasilkan output dalam format file SubRip (`.srt`).
 
@@ -52,8 +54,9 @@ Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunaka
     ```
 2.  Di jendela aplikasi:
     *   Klik "Browse..." untuk memilih file video Anda.
-    *   Masukkan Google Gemini API Key Anda.
-    *   Pilih bahasa target terjemahan dari dropdown.
+    *   Masukkan Google Gemini API Key Anda (akan disimpan setelah penggunaan pertama).
+    *   Pilih bahasa target terjemahan.
+    *   Pilih pengaturan Whisper (Model, Device, Compute Type).
     *   Klik "Generate Subtitles".
 3.  Tunggu proses transkripsi dan terjemahan selesai. Status akan ditampilkan di area log.
     *   *Catatan:* Pengunduhan model Faster-Whisper (`large-v2`) mungkin memakan waktu lama saat pertama kali dijalankan.
