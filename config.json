@@ -1,7 +1,0 @@
-{
-    "gemini_api_key": "AIzaSyATXlHLKuRLJzdUD0aQaWPTSDTYYdU3NAE",
-    "target_language": "English",
-    "whisper_model": "large-v2",
-    "device": "cuda",
-    "compute_type": "float16"
-}
