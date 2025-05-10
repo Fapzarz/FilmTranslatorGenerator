@@ -3,7 +3,10 @@
 [English](#english) | [Bahasa Indonesia](#bahasa-indonesia)
 
 <a name="english"></a>
-## English
+<details open>
+<summary><strong>English</strong></summary>
+
+## Description
 
 A simple desktop application for transcribing audio from video files using Faster-Whisper and translating the text using Google Gemini API to generate subtitle files in various formats.
 
@@ -88,10 +91,13 @@ This project is licensed under the [MIT License](LICENSE).
 
 More detailed documentation is available in the [GitHub repository](https://github.com/Fapzarz/FilmTranslatorGenerator).
 
----
+</details>
 
 <a name="bahasa-indonesia"></a>
-## Bahasa Indonesia
+<details>
+<summary><strong>Bahasa Indonesia</strong></summary>
+
+## Deskripsi
 
 Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunakan Faster-Whisper dan menerjemahkan teksnya menggunakan Google Gemini API untuk menghasilkan file subtitle dalam berbagai format.
 
@@ -175,3 +181,5 @@ Proyek ini dilisensikan di bawah [MIT License](LICENSE).
 ### Dokumentasi
 
 Dokumentasi lebih lengkap tersedia di [GitHub repository](https://github.com/Fapzarz/FilmTranslatorGenerator).
+
+</details>
