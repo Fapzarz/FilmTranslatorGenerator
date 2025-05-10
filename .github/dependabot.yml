@@ -1,0 +1,28 @@
+# Dependabot configuration file
+# See documentation: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Enable version updates for Python/pip
+  - package-ecosystem: "pip"
+    # Look for requirements files in the root directory
+    directory: "/"
+    # Check for updates once a week (on Monday)
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    # Maximum 5 open pull requests at a time
+    open-pull-requests-limit: 5
+    # Labels on pull requests
+    labels:
+      - "dependencies"
+      - "python"
+    # Assign reviewers
+    reviewers:
+      - "Fapzarz"
+    # Set target branch
+    target-branch: "master"
+    # Define commit message style
+    commit-message:
+      prefix: "pip"
+      include: "scope" 
