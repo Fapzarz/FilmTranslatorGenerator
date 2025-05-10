@@ -4,6 +4,33 @@ Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.0] - 2025-05-10
+
+### Added
+- Desain UI modern menggunakan tema Sun Valley (sv-ttk)
+- Pratinjau video dengan thumbnail
+- Dukungan multi-format output (SRT, VTT, TXT)
+- Perbandingan teks asli dengan terjemahan secara side-by-side
+- Pelacakan progres yang ditingkatkan
+- Dialog pengaturan lanjutan
+- Menu tentang aplikasi (About) dan dokumentasi
+- Implementasi struktur kode modular:
+  - `config.py`: Pengaturan konfigurasi dan konstanta
+  - `utils/`: Utilitas pemformatan dan penanganan media
+  - `backend/`: Fungsionalitas transkripsi dan terjemahan
+  - `gui/`: Komponen UI dan kelas aplikasi utama
+- Antarmuka yang responsif dengan pengaturan ukuran minimum jendela
+- Sistem tema (terang/gelap) dan warna aksen yang dapat dikustomisasi
+- Dokumentasi lebih lengkap tersedia di [GitHub](https://github.com/Fapzarz/FilmTranslatorGenerator)
+
+### Changed
+- Struktur kode direfaktor dari monolitik menjadi modular
+- Antarmuka baru yang lebih intuitif dan modern
+- Peningkatan penanganan error dan dukungan fallback untuk terjemahan
+- Peningkatan pengaturan ukuran batch terjemahan
+- Sistem pengaturan yang diperluas
+- Proses pembuatan subtitle yang dioptimalkan
+
 ## [1.1] - 2025-05-05
 
 ### Added
@@ -25,7 +52,7 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Logika offset waktu mulai subtitle (delay 300ms) yang sebelumnya ditambahkan.
 - Fungsi pembersihan VRAM eksplisit setelah transkripsi (model sekarang dikelola oleh logika pemuatan ulang).
 
-## [1.0] - 2025-05-04 (Tanggal Perkiraan)
+## [1.0] - 2025-05-04
 
 ### Added
 - Fungsionalitas dasar: Transkripsi video dengan Faster-Whisper (`large-v2`).

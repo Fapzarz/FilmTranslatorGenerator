@@ -27,3 +27,6 @@ Thumbs.db
 # Faster-Whisper model cache (optional, if stored locally)
 # Adjust path if necessary
 ctranslate2/
+
+# Configuration files
+config.json
