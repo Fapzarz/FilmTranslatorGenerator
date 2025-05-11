@@ -37,25 +37,26 @@ def _translate_with_gemini(gemini_api_key, text_segments, target_language, statu
     translated_segments = []
     total_segments = len(text_segments)
     num_batches = (total_segments + batch_size - 1) // batch_size
-    mismatch_tolerance = 10 
+    mismatch_tolerance = 10
 
     for i in range(0, total_segments, batch_size):
         batch_num = (i // batch_size) + 1
         status_callback(f"Processing batch {batch_num}/{num_batches} with Gemini... ", level="INFO")
         batch = text_segments[i:i+batch_size]
-        if not batch: 
+        if not batch:
             continue
 
         prompt_lines = [
             f"Translate the following numbered dialogue segments into {target_language}."
+            f"IMPORTANT: You must ONLY translate the text content. Do not modify any numbers, timestamps, or formatting."
             f"Output ONLY the raw translated text for each number, starting directly with number 1."
-            f"Do NOT include any introductory phrases, explanations, greetings, or any text other than the numbered translations."
+            f"Do NOT include any introductory phrases, explanations, greetings, timestamps, or any text other than the numbered translations."
             f"Example: If input is '1. Hello\n2. Goodbye', output should be '1. Halo\n2. Selamat tinggal' (for Indonesian) and nothing else.\n"
         ]
         for j, segment in enumerate(batch):
             cleaned_text = segment['text'].strip().replace('\n', ' ')
             prompt_lines.append(f"{j+1}. {cleaned_text}")
-        prompt_lines.append("\nYour entire response must be ONLY the numbered list of translations.")
+        prompt_lines.append("\nYour entire response must be ONLY the numbered list of translations with NO timestamps or formatting.")
         batch_prompt = "\n".join(prompt_lines)
 
         try:
@@ -67,7 +68,10 @@ def _translate_with_gemini(gemini_api_key, text_segments, target_language, statu
             translated_texts = response_text.split('\n')
             parsed_translations = []
             for line in translated_texts:
+                # More strict cleaning to remove any potential timestamps that might have been generated
                 cleaned_line = re.sub(r"^\s*\d+[\.\)]\s*", "", line).strip()
+                # Remove any timestamp-like patterns that might have been included
+                cleaned_line = re.sub(r"\d{1,2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{1,2}:\d{2}:\d{2},\d{3}", "", cleaned_line).strip()
                 if cleaned_line: 
                     parsed_translations.append(cleaned_line)
 
@@ -80,12 +84,13 @@ def _translate_with_gemini(gemini_api_key, text_segments, target_language, statu
             
             if actual_count != expected_count:
                 status_callback(f"Warning: Gemini Batch {batch_num} - Slight mismatch (expected {expected_count}, got {actual_count}). Proceeding with tolerance.", level="WARNING")
-            
+                
             count_to_use = min(expected_count, actual_count)
             for j in range(count_to_use):
+                # Preserve the original timestamps exactly
                 translated_segments.append({
-                    'start': batch[j]['start'], 
-                    'end': batch[j]['end'], 
+                    'start': batch[j]['start'],
+                    'end': batch[j]['end'],
                     'text': parsed_translations[j]
                 })
             status_callback(f"Gemini Batch {batch_num}/{num_batches} processed. Got {actual_count}/{expected_count} segments.", level="INFO")
@@ -96,13 +101,18 @@ def _translate_with_gemini(gemini_api_key, text_segments, target_language, statu
                 try:
                     fallback_prompt = (
                         f"Translate the following dialogue segment into {target_language}. "
+                        f"IMPORTANT: Translate ONLY the text content. Do not modify any formatting or add timestamps."
                         f"Output ONLY the raw translated text. Do NOT include any introductory phrases, explanations, or any text other than the translation itself.\n\n"
                         f"Dialogue: {segment_item['text'].strip()}"
                     )
                     status_callback(f"VERBOSE: Sending fallback prompt for segment {i+k+1} to Gemini...", level="VERBOSE")
                     fallback_response = model.generate_content(fallback_prompt, generation_config=generation_config)
                     fallback_text = fallback_response.text.strip()
+                    # Clean any potential timestamp formatting that might have been added
+                    fallback_text = re.sub(r"\d{1,2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{1,2}:\d{2}:\d{2},\d{3}", "", fallback_text).strip()
                     status_callback(f"VERBOSE: Received fallback response for segment {i+k+1} from Gemini.", level="VERBOSE")
+                    
+                    # Preserve the original timestamps exactly
                     translated_segments.append({
                         'start': segment_item['start'], 
                         'end': segment_item['end'], 
