@@ -1,5 +1,128 @@
 # Changelog
 
+[English](#english) | [Bahasa Indonesia](#bahasa-indonesia)
+
+<a name="english"></a>
+<details open>
+<summary><strong>English</strong></summary>
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [2.2.0] - 2025-05-12
+
+### Added
+- **Multiple Translation API Support**: Integration with several translation API providers:
+  - OpenAI (GPT-4.1, GPT-4o, GPT-3.5-turbo, etc.)
+  - Anthropic Claude (Claude 3 Opus, Claude 3.5 Sonnet, etc.) 
+  - DeepSeek (via DeepSeek-chat)
+- **Translation Provider Selection UI**: Dynamic provider selection dialog with provider-specific configurations
+- **API Key & Model Storage**: All API keys and model selections for each provider stored in configuration
+- **Dynamic UI**: Self-adapting interface based on the selected translation provider, displaying relevant inputs and options
+
+### Changed
+- Refactored translation functions to support various API providers
+- Configuration structure expanded to store settings for all translation providers
+- Improvements to code formatting and indentation across the project
+
+### Fixed
+- Indentation errors and `try-except-finally` structure in `process_video_thread`
+- Various linting issues in `backend/translate.py`
+- Variable naming consistency across the application
+
+## [2.1.1] - 2025-05-11
+
+### Fixed
+- `UnboundLocalError` for `progress_action_frame` in `gui/app.py` due to incorrect widget definition and packing order in `create_main_frame`.
+- `NameError` for `APP_VERSION` in `gui/app.py` due to not being imported from `config.py` (before eventually being removed from the UI).
+- Ongoing fix attempts for indentation errors and `try-except-finally` structure in `process_video_thread` within `gui/app.py` detected by the linter.
+
+## [2.1] - 2025-05-11
+
+### Added
+- **Video Queue Management**: Add, remove, and process multiple video files sequentially.
+- **Basic Subtitle Editor**: Edit generated subtitle text and timestamps directly within the application.
+- **Project Save & Load**: Save queue state, processed data, and settings to a project file (.ftgproj) and load it back.
+- **Gemini API Parameter Customization**: Configure Temperature, Top-P, and Top-K for Gemini API through Advanced Settings.
+- **Preview Video with Subtitles**: Open selected video with generated temporary subtitle file.
+- **Enhanced UI Layout**: Adopted a more structured panel-based layout using PanedWindow to improve user experience.
+
+### Changed
+- Application version label removed from UI status bar.
+- Default Gemini API model verified with `gemini-2.5-flash-preview-04-17` version.
+
+### Fixed
+- `KeyError` when loading default configuration for Gemini API parameters.
+- Various indentation and `try-except` structure errors in `gui/app.py` (detected by linter).
+- `NameError` for `APP_VERSION` in `gui/app.py` when displaying version label (before removal).
+
+## [2.0] - 2025-05-10
+
+### Added
+- Modern UI design using Sun Valley theme (sv-ttk)
+- Video preview with thumbnails
+- Multi-format output support (SRT, VTT, TXT)
+- Side-by-side comparison of original text with translation
+- Enhanced progress tracking
+- Advanced settings dialog
+- About application menu and documentation
+- Modular code structure implementation:
+  - `config.py`: Configuration settings and constants
+  - `utils/`: Formatting and media handling utilities
+  - `backend/`: Transcription and translation functionality
+  - `gui/`: UI components and main application class
+- Responsive interface with minimum window size settings
+- Customizable theme system (light/dark) and accent colors
+- More detailed documentation available on [GitHub](https://github.com/Fapzarz/FilmTranslatorGenerator)
+
+### Changed
+- Code structure refactored from monolithic to modular
+- New, more intuitive and modern interface
+- Improved error handling and fallback support for translation
+- Enhanced translation batch size settings
+- Expanded settings system
+- Optimized subtitle generation process
+
+## [1.1] - 2025-05-05
+
+### Added
+- Faster-Whisper model selection feature (tiny, base, small, medium, large-v2, large-v3).
+- Device selection feature (cuda/cpu) and computation type (float16, int8, etc.) for Faster-Whisper.
+- Automatic settings storage (API Key, model, device, computation type, target language) to `config.json` file.
+- Automatic settings loading from `config.json` when application starts.
+- Automatic Whisper model reloading if settings are changed by the user.
+- This `CHANGELOG.md` file.
+- `LICENSE` file (MIT).
+
+### Changed
+- Updated `README.md` with new features and instructions.
+- Updated `requirements.txt`.
+- Moved `_load_config` call in `__init__` to fix `AttributeError`.
+- Application window size adjusted to accommodate new options.
+
+### Removed
+- Previous subtitle start time offset logic (delay 300ms).
+- Explicit VRAM cleanup function after transcription (model now managed by reload logic).
+
+## [1.0] - 2025-05-04
+
+### Added
+- Basic functionality: Video transcription with Faster-Whisper (`large-v2`).
+- Translation with Google Gemini API (`gemini-2.5-flash-preview-04-17`) in batches.
+- SRT file generation.
+- Basic GUI using Tkinter.
+- Basic error handling.
+- API Key storage to `config.json` (initial version).
+- `.gitignore` file.
+- Initial `requirements.txt` file.
+
+</details>
+
+<a name="bahasa-indonesia"></a>
+<details>
+<summary><strong>Bahasa Indonesia</strong></summary>
+
 Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
@@ -31,7 +154,6 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `UnboundLocalError` untuk `progress_action_frame` di `gui/app.py` karena urutan definisi dan pemaketan widget yang salah dalam `create_main_frame`.
 - `NameError` untuk `APP_VERSION` di `gui/app.py` karena tidak diimpor dari `config.py` (sebelum akhirnya dihapus dari UI).
 - Upaya perbaikan berkelanjutan untuk kesalahan indentasi dan struktur `try-except-finally` di `process_video_thread` dalam `gui/app.py` yang terdeteksi oleh linter.
-
 
 ## [2.1] - 2025-05-11
 
@@ -111,3 +233,5 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Penyimpanan API Key ke `config.json` (versi awal).
 - File `.gitignore`.
 - File `requirements.txt` awal.
+
+</details>
