@@ -1016,8 +1016,8 @@ class AppGUI:
                         self.log_status(f"Auto-save failed: {e}", level="ERROR")
             
                 # Update status
-                self.processed_file_data[selected_filepath]['status'] = 'Completed'
-                self._update_listbox_status_for_path(selected_filepath, 'Completed')
+                self.processed_file_data[selected_filepath]['status'] = 'Done'
+                self._update_listbox_status_for_path(selected_filepath, 'Done')
                 self.update_progress("Processing Complete!", is_complete=True)
                 
                 # Update history
@@ -1047,8 +1047,25 @@ class AppGUI:
         if not self.video_queue:
             messagebox.showinfo("Info", "Video queue is empty. Please add videos to process.")
             return
+            
+        # Get the selected video from the queue
+        selected_indices = self.video_listbox.curselection()
+        if not selected_indices:
+            if self.video_listbox.size() > 0:
+                # If nothing selected but queue has items, select the first one
+                self.video_listbox.selection_set(0)
+                selected_indices = (0,)
+            else:
+                messagebox.showinfo("Info", "No video selected. Please select a video from the queue.")
+                return
+        
+        # Get the selected video path
+        selected_index = selected_indices[0]
+        self.current_processing_video = self.video_queue[selected_index]
+        
+        # Start processing in a separate thread
         processing_thread = threading.Thread(target=self.process_video_thread, daemon=True)
-        processing_thread.start() 
+        processing_thread.start()
 
     def preview_with_subtitles(self):
         """Saves the current output of the selected video as a temporary subtitle file and attempts to open the video with it."""
@@ -1599,7 +1616,7 @@ class AppGUI:
         try:
             # Update history with the latest processed files data
             for filepath, file_data in self.processed_file_data.items():
-                if file_data.get('status') == 'Completed':
+                if file_data.get('status') == 'Done':
                     # Only store essential metadata in history to avoid large files
                     self.file_history[filepath] = {
                         'last_processed': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -1724,3 +1741,19 @@ class AppGUI:
         self._save_config()
         self._save_history()
         self.root.destroy()
+
+    def _update_listbox_status_for_path(self, filepath, status):
+        """Update the status shown in the listbox for a given file path."""
+        try:
+            # Find the index of the filepath in self.video_queue
+            if filepath in self.video_queue:
+                queue_index = self.video_queue.index(filepath)
+                # Update the listbox item at that index
+                self.video_listbox.delete(queue_index)
+                self.video_listbox.insert(queue_index, f"[{status}] {os.path.basename(filepath)}")
+                # If this was the selected item, reselect it
+                selected_indices = self.video_listbox.curselection()
+                if selected_indices and selected_indices[0] == queue_index:
+                    self.video_listbox.selection_set(queue_index)
+        except Exception as e:
+            self.log_status(f"Error updating listbox status: {e}", level="ERROR")
