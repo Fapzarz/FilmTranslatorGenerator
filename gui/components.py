@@ -5,13 +5,13 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext
 import webbrowser
 
-from config import APP_VERSION, GITHUB_URL, THEMES, ACCENT_COLORS, PREVIEW_OPTIONS, AUTO_SAVE_OPTIONS
+from config import APP_VERSION, GITHUB_URL, THEMES, ACCENT_COLORS, PREVIEW_OPTIONS, AUTO_SAVE_OPTIONS, TRANSLATION_PROVIDERS, OPENAI_MODELS
 
 def create_advanced_settings_dialog(parent, settings):
     """Create advanced settings dialog."""
     dialog = tk.Toplevel(parent)
     dialog.title("Advanced Settings")
-    dialog.geometry("450x420")
+    dialog.geometry("450x620")
     dialog.resizable(False, False)
     dialog.transient(parent)
     dialog.grab_set()
@@ -50,6 +50,30 @@ def create_advanced_settings_dialog(parent, settings):
     ttk.Label(accent_frame, text="Accent Color:").pack(side=tk.LEFT, padx=5)
     ttk.Combobox(accent_frame, textvariable=settings['accent_color_var'], 
                values=ACCENT_COLORS, state="readonly", width=10).pack(side=tk.LEFT, padx=5)
+
+    # --- Translation Provider Settings ---
+    provider_frame = ttk.LabelFrame(settings_frame, text="Translation Service Provider", padding="10")
+    provider_frame.pack(fill=tk.X, padx=5, pady=10)
+
+    provider_selection_frame = ttk.Frame(provider_frame)
+    provider_selection_frame.pack(fill=tk.X, padx=5, pady=3)
+    ttk.Label(provider_selection_frame, text="Service Provider:").pack(side=tk.LEFT, padx=5)
+    provider_combobox = ttk.Combobox(provider_selection_frame, textvariable=settings['translation_provider_var'], 
+                 values=TRANSLATION_PROVIDERS, state="readonly", width=15)
+    provider_combobox.pack(side=tk.LEFT, padx=5)
+    
+    # This frame will hold the dynamic UI for the selected provider's settings
+    provider_details_content_frame = ttk.Frame(provider_frame)
+    provider_details_content_frame.pack(fill=tk.X, expand=True, padx=5, pady=(5,0))
+
+    # Callback from AppGUI to populate/update the provider_details_content_frame
+    update_ui_callback = settings.get('update_translation_ui_callback')
+
+    if callable(update_ui_callback):
+        # Bind the combobox selection to the callback
+        provider_combobox.bind("<<ComboboxSelected>>", lambda event: update_ui_callback(provider_details_content_frame))
+        # Initial population of the UI
+        update_ui_callback(provider_details_content_frame)
     
     # --- Gemini API Settings ---
     gemini_settings_frame = ttk.LabelFrame(settings_frame, text="Gemini API Parameters", padding="10")

@@ -15,9 +15,14 @@ import subprocess # For opening video with subtitles more reliably
 import sys # For platform-specific operations
 import re # For parsing editor content later
 
-from config import APP_TITLE, CONFIG_FILE, get_default_config, LANGUAGES, WHISPER_MODELS, DEVICES, COMPUTE_TYPES, OUTPUT_FORMATS, GITHUB_URL, APP_VERSION
+from config import (
+    APP_TITLE, CONFIG_FILE, get_default_config, LANGUAGES, 
+    WHISPER_MODELS, DEVICES, COMPUTE_TYPES, OUTPUT_FORMATS, 
+    GITHUB_URL, APP_VERSION, TRANSLATION_PROVIDERS, 
+    OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODEL # Added ANTHROPIC_MODELS, DEEPSEEK_MODEL
+)
 from backend.transcribe import transcribe_video, load_whisper_model
-from backend.translate import translate_text_gemini
+from backend.translate import translate_text
 from utils.format import format_output
 from utils.media import extract_video_thumbnail, play_video_preview, get_video_info
 from gui.components import create_advanced_settings_dialog, create_about_dialog, create_notebook, create_progress_frame
@@ -45,8 +50,16 @@ class AppGUI:
         self.stat_pending_files = tk.StringVar(value="Pending: 0")
         self.stat_failed_files = tk.StringVar(value="Failed: 0")
         self.extensive_logging_var = tk.StringVar() # For extensive logging setting
+        self.translation_provider_var = tk.StringVar() # New var for translation provider
         
-        self.api_key = tk.StringVar()
+        self.gemini_api_key_var = tk.StringVar() # Renamed from self.api_key for clarity
+        self.openai_api_key_var = tk.StringVar() 
+        self.anthropic_api_key_var = tk.StringVar() # New for Anthropic API Key
+        self.deepseek_api_key_var = tk.StringVar() # New for DeepSeek API Key
+        
+        self.openai_model_var = tk.StringVar() 
+        self.anthropic_model_var = tk.StringVar() # New for Anthropic model
+
         self.target_language = tk.StringVar()
         self.whisper_model_name_var = tk.StringVar()
         self.device_var = tk.StringVar()
@@ -210,21 +223,41 @@ class AppGUI:
         translation_settings_sub_panel = ttk.Frame(settings_preview_panel, padding="5")
         translation_settings_sub_panel.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5, pady=5)
 
-        api_frame = ttk.Frame(translation_settings_sub_panel)
-        api_frame.pack(fill=tk.X, padx=5, pady=3)
-        ttk.Label(api_frame, text="Gemini API Key:").pack(side=tk.LEFT, padx=5, anchor='w')
-        ttk.Entry(api_frame, textvariable=self.api_key, width=35, show="*").pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-        
-        lang_frame = ttk.Frame(translation_settings_sub_panel)
-        lang_frame.pack(fill=tk.X, padx=5, pady=3)
-        ttk.Label(lang_frame, text="Target Language:").pack(side=tk.LEFT, padx=5, anchor='w')
+        # --- Translation Provider Selection ---
+        provider_selection_frame = ttk.Frame(translation_settings_sub_panel)
+        provider_selection_frame.pack(fill=tk.X, padx=5, pady=3)
+        ttk.Label(provider_selection_frame, text="Provider:").pack(side=tk.LEFT, padx=(0,5), anchor='w')
+        self.provider_combobox = ttk.Combobox(
+            provider_selection_frame, 
+            textvariable=self.translation_provider_var, 
+            values=TRANSLATION_PROVIDERS, 
+            state="readonly", 
+            width=15 # Adjusted width
+        )
+        self.provider_combobox.pack(side=tk.LEFT, padx=5)
+        self.provider_combobox.bind("<<ComboboxSelected>>", self._update_translation_settings_ui)
+
+        # --- Frame for Provider-Specific Settings (API Key, Model, etc.) ---
+        self.provider_details_frame = ttk.Frame(translation_settings_sub_panel)
+        self.provider_details_frame.pack(fill=tk.X, expand=True, padx=5, pady=(5,0))
+
+        # Initial call to populate based on default/loaded provider
+        # This will be called again in _load_config after variables are set
+
+        # --- Common Translation Settings (Language, Output Format) ---
+        common_settings_frame = ttk.Frame(translation_settings_sub_panel)
+        common_settings_frame.pack(fill=tk.X, padx=5, pady=3)
+
+        lang_frame = ttk.Frame(common_settings_frame)
+        lang_frame.pack(fill=tk.X, pady=(0,3))
+        ttk.Label(lang_frame, text="Target Language:").pack(side=tk.LEFT, padx=(0,5), anchor='w')
         self.language_combobox = ttk.Combobox(lang_frame, textvariable=self.target_language, 
                                              values=LANGUAGES, state="readonly", width=18)
         self.language_combobox.pack(side=tk.LEFT, padx=5)
         
-        format_frame = ttk.Frame(translation_settings_sub_panel) 
-        format_frame.pack(fill=tk.X, padx=5, pady=3)
-        ttk.Label(format_frame, text="Output Format:").pack(side=tk.LEFT, padx=5, anchor='w')
+        format_frame = ttk.Frame(common_settings_frame)
+        format_frame.pack(fill=tk.X)
+        ttk.Label(format_frame, text="Output Format:").pack(side=tk.LEFT, padx=(0,5), anchor='w')
         self.format_combobox = ttk.Combobox(format_frame, textvariable=self.output_format_var,
                                           values=OUTPUT_FORMATS, state="readonly", width=10)
         self.format_combobox.pack(side=tk.LEFT, padx=5)
@@ -285,8 +318,16 @@ class AppGUI:
             'gemini_temperature_var': self.gemini_temperature_var,
             'gemini_top_p_var': self.gemini_top_p_var,
             'gemini_top_k_var': self.gemini_top_k_var,
-            'extensive_logging_var': self.extensive_logging_var, # Pass to advanced settings
-            'save_callback': self._save_config
+            'extensive_logging_var': self.extensive_logging_var, 
+            'translation_provider_var': self.translation_provider_var,
+            'gemini_api_key_var': self.gemini_api_key_var,
+            'openai_api_key_var': self.openai_api_key_var,        
+            'openai_model_var': self.openai_model_var,            
+            'anthropic_api_key_var': self.anthropic_api_key_var,
+            'anthropic_model_var': self.anthropic_model_var,
+            'deepseek_api_key_var': self.deepseek_api_key_var,
+            'save_callback': self._save_config,
+            'update_translation_ui_callback': self._update_translation_settings_ui
         }
         create_advanced_settings_dialog(self.root, settings)
     
@@ -346,69 +387,49 @@ class AppGUI:
                 self.compute_type_var.set("")  # Clear if no valid types
 
     def _load_config(self):
-        """Loads configuration from config.json."""
+        """Load configuration from JSON file or use defaults."""
         defaults = get_default_config()
         try:
             if os.path.exists(CONFIG_FILE):
                 with open(CONFIG_FILE, 'r') as f:
                     config_data = json.load(f)
-                # Use loaded value or default if key is missing
-                self.api_key.set(config_data.get('gemini_api_key', defaults['gemini_api_key']))
-                self.target_language.set(config_data.get('target_language', defaults['target_language']))
-                self.whisper_model_name_var.set(config_data.get('whisper_model', defaults['whisper_model']))
-                self.device_var.set(config_data.get('device', defaults['device']))
-                self.compute_type_var.set(config_data.get('compute_type', defaults['compute_type']))
-                self.theme_var.set(config_data.get('theme', defaults['theme']))
-                self.accent_color_var.set(config_data.get('accent_color', defaults['accent_color']))
-                self.batch_size_var.set(str(config_data.get('batch_size', defaults['batch_size'])))
-                self.output_format_var.set(config_data.get('output_format', defaults['output_format']))
-                self.preview_var.set(config_data.get('preview', defaults['preview']))
-                self.auto_save_var.set(config_data.get('auto_save', defaults['auto_save']))
-                self.gemini_temperature_var.set(float(config_data.get('gemini_temperature', defaults['gemini_temperature'])))
-                self.gemini_top_p_var.set(float(config_data.get('gemini_top_p', defaults['gemini_top_p'])))
-                self.gemini_top_k_var.set(int(config_data.get('gemini_top_k', defaults['gemini_top_k'])))
-                self.extensive_logging_var.set(config_data.get('extensive_logging', defaults['extensive_logging']))
-                self.log_status("Loaded settings from config.")
             else:
-                # Set defaults if config file doesn't exist
-                self.api_key.set(defaults['gemini_api_key'])
-                self.target_language.set(defaults['target_language'])
-                self.whisper_model_name_var.set(defaults['whisper_model'])
-                self.device_var.set(defaults['device'])
-                self.compute_type_var.set(defaults['compute_type'])
-                self.theme_var.set(defaults['theme'])
-                self.accent_color_var.set(defaults['accent_color'])
-                self.batch_size_var.set(str(defaults['batch_size']))
-                self.output_format_var.set(defaults['output_format'])
-                self.preview_var.set(defaults['preview'])
-                self.auto_save_var.set(defaults['auto_save'])
-                self.gemini_temperature_var.set(defaults['gemini_temperature'])
-                self.gemini_top_p_var.set(defaults['gemini_top_p'])
-                self.gemini_top_k_var.set(defaults['gemini_top_k'])
-                self.extensive_logging_var.set(defaults['extensive_logging'])
-                self.log_status("Config file not found, using defaults.")
+                config_data = defaults
+        except Exception as e:
+            self.log_status(f"Error loading config: {e}. Using defaults.", level="ERROR")
+            config_data = defaults
 
-        except (FileNotFoundError, json.JSONDecodeError, Exception) as e:
-            self.log_status(f"Warning: Could not load config file: {e}. Using defaults.")
-            # Ensure defaults are set even on error
-            self.api_key.set(defaults['gemini_api_key'])
-            self.target_language.set(defaults['target_language'])
-            self.whisper_model_name_var.set(defaults['whisper_model'])
-            self.device_var.set(defaults['device'])
-            self.compute_type_var.set(defaults['compute_type'])
-            self.theme_var.set(defaults['theme'])
-            self.accent_color_var.set(defaults['accent_color'])
-            self.batch_size_var.set(str(defaults['batch_size']))
-            self.output_format_var.set(defaults['output_format'])
-            self.preview_var.set(defaults['preview'])
-            self.auto_save_var.set(defaults['auto_save'])
-            self.gemini_temperature_var.set(defaults['gemini_temperature'])
-            self.gemini_top_p_var.set(defaults['gemini_top_p'])
-            self.gemini_top_k_var.set(defaults['gemini_top_k'])
-            self.extensive_logging_var.set(defaults['extensive_logging'])
+        self.translation_provider_var.set(config_data.get('translation_provider', defaults['translation_provider']))
+        self.gemini_api_key_var.set(config_data.get('gemini_api_key', defaults['gemini_api_key']))
+        self.openai_api_key_var.set(config_data.get('openai_api_key', defaults['openai_api_key']))
+        self.anthropic_api_key_var.set(config_data.get('anthropic_api_key', defaults['anthropic_api_key']))
+        self.deepseek_api_key_var.set(config_data.get('deepseek_api_key', defaults['deepseek_api_key']))
+        
+        self.openai_model_var.set(config_data.get('openai_model', defaults['openai_model']))
+        self.anthropic_model_var.set(config_data.get('anthropic_model', defaults['anthropic_model']))
+        
+        self.target_language.set(config_data.get('target_language', defaults['target_language']))
+        self.whisper_model_name_var.set(config_data.get('whisper_model', defaults['whisper_model']))
+        self.device_var.set(config_data.get('device', defaults['device']))
+        self.compute_type_var.set(config_data.get('compute_type', defaults['compute_type']))
+        self.theme_var.set(config_data.get('theme', defaults['theme']))
+        self.accent_color_var.set(config_data.get('accent_color', defaults['accent_color']))
+        self.batch_size_var.set(str(config_data.get('batch_size', defaults['batch_size'])))
+        self.output_format_var.set(config_data.get('output_format', defaults['output_format']))
+        self.preview_var.set(config_data.get('preview', defaults['preview']))
+        self.auto_save_var.set(config_data.get('auto_save', defaults['auto_save']))
+        self.gemini_temperature_var.set(float(config_data.get('gemini_temperature', defaults['gemini_temperature'])))
+        self.gemini_top_p_var.set(float(config_data.get('gemini_top_p', defaults['gemini_top_p'])))
+        self.gemini_top_k_var.set(int(config_data.get('gemini_top_k', defaults['gemini_top_k'])))
+        self.extensive_logging_var.set(config_data.get('extensive_logging', defaults['extensive_logging']))
+
+        self.theme_var.set(config_data.get('theme', defaults['theme']))
+        self._apply_theme() # Apply theme after loading
+        self.update_compute_types() # Update compute types based on device
+        self._update_translation_settings_ui() # IMPORTANT: Update UI after loading provider and keys
 
     def _save_config(self):
-        """Saves current configuration to config.json."""
+        """Save current configuration to JSON file."""
         try:
             # Try to convert batch_size to int
             try:
@@ -420,7 +441,13 @@ class AppGUI:
                 self.batch_size_var.set(str(batch_size))
             
             config_data = {
-                'gemini_api_key': self.api_key.get(),
+                'translation_provider': self.translation_provider_var.get(),
+                'gemini_api_key': self.gemini_api_key_var.get(),
+                'openai_api_key': self.openai_api_key_var.get(),
+                'anthropic_api_key': self.anthropic_api_key_var.get(),
+                'deepseek_api_key': self.deepseek_api_key_var.get(),
+                'openai_model': self.openai_model_var.get(),
+                'anthropic_model': self.anthropic_model_var.get(),
                 'target_language': self.target_language.get(),
                 'whisper_model': self.whisper_model_name_var.get(),
                 'device': self.device_var.get(),
@@ -434,7 +461,7 @@ class AppGUI:
                 'gemini_temperature': self.gemini_temperature_var.get(),
                 'gemini_top_p': self.gemini_top_p_var.get(),
                 'gemini_top_k': self.gemini_top_k_var.get(),
-                'extensive_logging': self.extensive_logging_var.get() # Save extensive logging setting
+                'extensive_logging': self.extensive_logging_var.get()
             }
             with open(CONFIG_FILE, 'w') as f:
                 json.dump(config_data, f, indent=4)
@@ -490,6 +517,11 @@ class AppGUI:
         else: # Should not happen with new format
             actual_filepath = raw_listbox_item
 
+        # Schedule the UI update to allow the event loop to process other events (like paned window dragging)
+        self.root.after(50, lambda fp=actual_filepath: self._handle_video_selection_update(fp))
+
+    def _handle_video_selection_update(self, actual_filepath):
+        """Handles the actual UI updates after a video selection, called via root.after()."""
         if actual_filepath and os.path.exists(actual_filepath):
             self.update_video_preview(actual_filepath)
             file_data = self.processed_file_data.get(actual_filepath)
@@ -498,29 +530,26 @@ class AppGUI:
                 self.transcribed_segments = file_data.get('transcribed_segments') 
                 self.translated_segments = file_data.get('translated_segments')   
                 self.update_comparison_view()
-                self._load_segments_to_editor(self.translated_segments) # Load to editor
-                # Enable editor if there are segments to edit
+                self._load_segments_to_editor(self.translated_segments) 
                 if self.translated_segments:
                     self.text_widgets['editor_text'].configure(state='normal')
                 else:
                     self.text_widgets['editor_text'].configure(state='disabled')
-
-            elif file_data: # Pending or still processing, or error before translation segments exist
+            elif file_data: 
                 self.display_output(f"Video selected: {os.path.basename(actual_filepath)}\\nStatus: {file_data['status']}")
                 self.text_widgets['original'].configure(state='normal'); self.text_widgets['original'].delete(1.0, tk.END); self.text_widgets['original'].configure(state='disabled')
                 self.text_widgets['translated'].configure(state='normal'); self.text_widgets['translated'].delete(1.0, tk.END); self.text_widgets['translated'].configure(state='disabled')
                 self.text_widgets['editor_text'].configure(state='disabled'); self.text_widgets['editor_text'].delete(1.0, tk.END)
-            else: # No data for this file path at all (should not happen if added to queue correctly)
+            else: 
                 self.display_output(f"No data found for {os.path.basename(actual_filepath)}.")
                 self.text_widgets['editor_text'].configure(state='disabled'); self.text_widgets['editor_text'].delete(1.0, tk.END)
-
-        else: # Path does not exist or actual_filepath is None
+        else: 
             self.update_video_preview(None) 
             self.display_output("")
             self.text_widgets['original'].configure(state='normal'); self.text_widgets['original'].delete(1.0, tk.END); self.text_widgets['original'].configure(state='disabled')
             self.text_widgets['translated'].configure(state='normal'); self.text_widgets['translated'].delete(1.0, tk.END); self.text_widgets['translated'].configure(state='disabled')
             self.text_widgets['editor_text'].configure(state='disabled'); self.text_widgets['editor_text'].delete(1.0, tk.END)
-        self._update_queue_statistics() # Update stats
+        # self._update_queue_statistics() # This is already called at the end of on_video_select_in_queue if needed
 
     def remove_selected_video_from_queue(self):
         """Removes the selected video from the queue."""
@@ -809,38 +838,40 @@ class AppGUI:
                     self.display_output("")
 
                 self.processed_file_data[video_file]['status'] = 'Processing_Whisper'
-                api_key_val = self.api_key.get()
+                
+                # Initial checks
+                api_key_val = self.gemini_api_key_var.get()
                 target_lang_val = self.target_language.get()
 
                 if not video_file or not os.path.exists(video_file):
                     self.log_status(f"Error: Video file not found: {video_file}")
                     self.update_progress(f"Error: File not found {os.path.basename(video_file)}", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_FileNotFound'
-                    self.video_listbox.delete(video_idx)
-                    self.video_listbox.insert(video_idx, f"[File Not Found] {os.path.basename(video_file)}")
                     continue
-
-                if not api_key_val:
-                    messagebox.showerror("Error", "Please enter your Gemini API Key.")
-                    self.log_status("Error: Gemini API Key missing. Halting queue.")
-                    self.update_progress("Error: API Key missing", is_error=True)
+                
+                if not ((self.translation_provider_var.get() == "Gemini" and api_key_val) or
+                        (self.translation_provider_var.get() == "OpenAI" and self.openai_api_key_var.get()) or
+                        (self.translation_provider_var.get() == "Anthropic" and self.anthropic_api_key_var.get()) or
+                        (self.translation_provider_var.get() == "DeepSeek" and self.deepseek_api_key_var.get())):
+                    # Simplified API key check: if selected provider needs a key and it's missing.
+                    missing_key_provider = self.translation_provider_var.get()
+                    messagebox.showerror("Error", f"API Key for {missing_key_provider} is missing.")
+                    self.log_status(f"Error: API Key for {missing_key_provider} missing. Halting queue.")
+                    self.update_progress(f"Error: API Key for {missing_key_provider} missing", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_Config'
-                    self.video_listbox.delete(video_idx)
-                    self.video_listbox.insert(video_idx, f"[Error Config] {os.path.basename(video_file)}")
-                    break
-
+                    break  # Stop queue processing for missing API key
+                
                 if not target_lang_val:
                     messagebox.showerror("Error", "Please select a target language.")
                     self.log_status("Error: Target language not selected. Halting queue.")
                     self.update_progress("Error: No target language", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_Config'
-                    self.video_listbox.delete(video_idx)
-                    self.video_listbox.insert(video_idx, f"[Error Config] {os.path.basename(video_file)}")
-                    break
+                    break  # Stop queue processing
                 
-                self._save_config()
-
-                try:
+                # All initial checks passed, proceed with core processing
+                self._save_config()  # Save general app settings
+                
+                try:  # For batch_size conversion
                     batch_size = int(self.batch_size_var.get())
                     if batch_size <= 0:
                         batch_size = get_default_config()['batch_size']
@@ -852,10 +883,9 @@ class AppGUI:
                     self.log_status(f"--- Process Failed (Whisper Model Load) for {os.path.basename(video_file)} ---")
                     self.update_progress("Failed to load Whisper model", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_WhisperModel'
-                    self.video_listbox.delete(video_idx)
-                    self.video_listbox.insert(video_idx, f"[Whisper Error] {os.path.basename(video_file)}")
-                    continue
-
+                    continue  # Skip to next file
+                
+                # Whisper model loaded, proceed to transcription
                 self.update_progress(f"Transcribing {os.path.basename(video_file)}...")
                 self.log_status(f"Starting transcription for {os.path.basename(video_file)}...")
                 self.processed_file_data[video_file]['status'] = 'Transcribing'
@@ -867,25 +897,41 @@ class AppGUI:
                     self.log_status(f"--- Process Failed (Transcription) for {os.path.basename(video_file)} ---")
                     self.update_progress(f"Transcription failed for {os.path.basename(video_file)}", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_Transcription'
-                    self.video_listbox.delete(video_idx)
-                    self.video_listbox.insert(video_idx, f"[Transcription Error] {os.path.basename(video_file)}")
                     continue
-
+                
                 segments_count = len(transcribed_segments)
                 self.update_progress(f"Transcribed {segments_count} segments for {os.path.basename(video_file)}")
                 self.log_status(f"Transcription completed for {os.path.basename(video_file)} with {segments_count} segments")
 
+                # Proceed to translation only if transcription was successful
                 self.update_progress(f"Translating {os.path.basename(video_file)} to {target_lang_val}...")
                 self.log_status(f"Starting translation for {os.path.basename(video_file)} to {target_lang_val}...")
                 self.processed_file_data[video_file]['status'] = 'Translating'
-                gem_temp = self.gemini_temperature_var.get()
-                gem_top_p = self.gemini_top_p_var.get()
-                gem_top_k = self.gemini_top_k_var.get()
                 
-                translated_segments = translate_text_gemini(
-                    api_key_val, transcribed_segments, target_lang_val,
-                    self.log_status, batch_size,
-                    gemini_temperature=gem_temp, gemini_top_p=gem_top_p, gemini_top_k=gem_top_k
+                selected_provider = self.translation_provider_var.get()
+                provider_config = {
+                    'name': selected_provider,
+                }
+                
+                # Add provider-specific configurations
+                if selected_provider == "Gemini":
+                    provider_config['gemini_api_key'] = self.gemini_api_key_var.get()
+                    provider_config['gemini_temperature'] = self.gemini_temperature_var.get()
+                    provider_config['gemini_top_p'] = self.gemini_top_p_var.get()
+                    provider_config['gemini_top_k'] = self.gemini_top_k_var.get()
+                elif selected_provider == "OpenAI":
+                    provider_config['openai_api_key'] = self.openai_api_key_var.get()
+                    provider_config['openai_model'] = self.openai_model_var.get()
+                elif selected_provider == "Anthropic":
+                    provider_config['anthropic_api_key'] = self.anthropic_api_key_var.get()
+                    provider_config['anthropic_model'] = self.anthropic_model_var.get()
+                elif selected_provider == "DeepSeek":
+                    provider_config['deepseek_api_key'] = self.deepseek_api_key_var.get()
+                    # DeepSeek model is fixed
+
+                translated_segments = translate_text(
+                    provider_config, transcribed_segments, target_lang_val,
+                    self.log_status, batch_size
                 )
                 self.processed_file_data[video_file]['translated_segments'] = translated_segments
                 self.translated_segments = translated_segments
@@ -894,10 +940,9 @@ class AppGUI:
                     self.log_status(f"--- Process Failed (Translation) for {os.path.basename(video_file)} ---")
                     self.update_progress(f"Translation failed for {os.path.basename(video_file)}", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_Translation'
-                    self.video_listbox.delete(video_idx)
-                    self.video_listbox.insert(video_idx, f"[Translation Error] {os.path.basename(video_file)}")
                     continue
-
+                
+                # Translation successful, format output
                 output_format_val = self.output_format_var.get()
                 self.update_progress(f"Formatting output ({output_format_val}) for {os.path.basename(video_file)}...")
                 self.log_status(f"Creating output in {output_format_val} for {os.path.basename(video_file)}...")
@@ -907,8 +952,8 @@ class AppGUI:
                 
                 if video_idx == self.video_listbox.curselection()[0] if self.video_listbox.curselection() else False:
                     self.display_output(current_output_for_file)
-                self.update_comparison_view()
-            
+                    self.update_comparison_view()
+                
                 if self.auto_save_var.get() == "On":
                     self.update_progress(f"Auto-saving output for {os.path.basename(video_file)}...")
                     base, _ = os.path.splitext(video_file)
@@ -923,27 +968,24 @@ class AppGUI:
                 self.log_status(f"--- Process Finished Successfully for {os.path.basename(video_file)} ---")
                 self.update_progress(f"Completed: {os.path.basename(video_file)}", is_complete=True)
                 self.processed_file_data[video_file]['status'] = 'Done'
-                self.video_listbox.delete(video_idx)
-                self.video_listbox.insert(video_idx, f"[Done] {os.path.basename(video_file)}")
-                # self._update_queue_statistics() is called in finally
-
-            except Exception as e:
+            
+            except Exception as e:  # Catch-all for the current video file processing
                 error_msg = str(e)
-                self.log_status(f"Error during processing {os.path.basename(video_file)}: {error_msg}")
-                messagebox.showerror("Processing Error", f"An error occurred with {os.path.basename(video_file)}: {error_msg}")
+                self.log_status(f"Unhandled error processing {os.path.basename(video_file)}: {error_msg}")
+                messagebox.showerror("Processing Error", f"An unexpected error occurred with {os.path.basename(video_file)}: {error_msg}")
+                self.processed_file_data.setdefault(video_file, {})  # Ensure dict entry exists
+                if not self.processed_file_data[video_file].get('status', '').startswith('Error_'):
+                    self.processed_file_data[video_file]['status'] = 'Error_Generic'
+                # If it was already an Error_Config, Error_FileNotFound etc., it remains that.
+            
+            finally:  # This finally block executes for each video file in the loop
+                # Update listbox with the final status for this item
+                final_status = self.processed_file_data.get(video_file, {}).get('status', 'Error_Unknown')
+                # Check if item still exists in listbox (it might if error was before listbox update)
+                if video_idx < self.video_listbox.size() and self.video_listbox.get(video_idx).startswith("[Processing]"):
+                    self.video_listbox.delete(video_idx)
+                    self.video_listbox.insert(video_idx, f"[{final_status}] {os.path.basename(video_file)}")
                 
-                current_status_in_dict = self.processed_file_data.get(video_file, {}).get('status', 'Error_Unknown')
-                if current_status_in_dict not in ['Error_FileNotFound', 'Error_Config', 'Error_WhisperModel', 'Error_Transcription', 'Error_Translation']:
-                    self.processed_file_data.setdefault(video_file, {})['status'] = 'Error_Generic'
-                else:
-                    self.processed_file_data.setdefault(video_file, {})['status'] = current_status_in_dict
-                
-                final_status_for_listbox = self.processed_file_data[video_file].get('status', 'Error')
-                self.video_listbox.delete(video_idx)
-                self.video_listbox.insert(video_idx, f"[{final_status_for_listbox}] {os.path.basename(video_file)}")
-                if self.processed_file_data[video_file].get('status') == 'Error_Config':
-                    break
-            finally:
                 self._update_queue_statistics()
                 self.current_processing_video = None
                 if video_idx < self.video_listbox.size():
@@ -951,12 +993,15 @@ class AppGUI:
                     self.video_listbox.selection_set(video_idx)
                     self.video_listbox.see(video_idx)
                 self.on_video_select_in_queue()
+                gc.collect()  # Clean up memory after each file
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
-        # After loop finishes or breaks
+        # After the loop finishes (or breaks due to API key/target lang error)
         self.generate_button.config(text=original_button_text, state=tk.NORMAL)
         self.update_progress("Queue processing finished." if not self.current_processing_video else "Queue processing interrupted.", is_complete=not self.current_processing_video)
         self.log_status("--- Queue Processing Finished ---")
-        self._update_queue_statistics() # Final stat update
+        self._update_queue_statistics()  # Final stat update
         self.current_processing_video = None
 
     def start_processing(self):
@@ -1200,21 +1245,27 @@ class AppGUI:
             'video_queue': self.video_queue,
             'processed_file_data': self.processed_file_data,
             'settings': {
-                'gemini_api_key': self.api_key.get(),
+                'translation_provider': self.translation_provider_var.get(),
+                'gemini_api_key': self.gemini_api_key_var.get(),
+                'openai_api_key': self.openai_api_key_var.get(),
+                'openai_model': self.openai_model_var.get(),
+                'anthropic_api_key': self.anthropic_api_key_var.get(),
+                'anthropic_model': self.anthropic_model_var.get(),
+                'deepseek_api_key': self.deepseek_api_key_var.get(),
                 'target_language': self.target_language.get(),
                 'whisper_model': self.whisper_model_name_var.get(),
                 'device': self.device_var.get(),
                 'compute_type': self.compute_type_var.get(),
                 'theme': self.theme_var.get(),
                 'accent_color': self.accent_color_var.get(),
-                'batch_size': self.batch_size_var.get(), # Stored as string, loaded as string
+                'batch_size': self.batch_size_var.get(),
                 'output_format': self.output_format_var.get(),
-                'preview_setting': self.preview_var.get(), # Renamed to avoid conflict with video preview method
-                'auto_save_setting': self.auto_save_var.get(), # Renamed 
+                'preview_setting': self.preview_var.get(),
+                'auto_save_setting': self.auto_save_var.get(),
                 'gemini_temperature': self.gemini_temperature_var.get(),
                 'gemini_top_p': self.gemini_top_p_var.get(),
                 'gemini_top_k': self.gemini_top_k_var.get(),
-                'extensive_logging': self.extensive_logging_var.get() # Save extensive logging setting
+                'extensive_logging': self.extensive_logging_var.get()
             }
         }
         return project_data
@@ -1313,7 +1364,14 @@ class AppGUI:
             settings = project_data.get('settings', {})
             defaults = get_default_config() # For fallback if a setting is missing
 
-            self.api_key.set(settings.get('gemini_api_key', defaults['gemini_api_key']))
+            self.translation_provider_var.set(settings.get('translation_provider', defaults['translation_provider']))
+            self.gemini_api_key_var.set(settings.get('gemini_api_key', defaults['gemini_api_key']))
+            self.openai_api_key_var.set(settings.get('openai_api_key', defaults['openai_api_key']))
+            self.openai_model_var.set(settings.get('openai_model', defaults.get('openai_model', OPENAI_MODELS[0] if OPENAI_MODELS else '')))
+            self.anthropic_api_key_var.set(settings.get('anthropic_api_key', defaults['anthropic_api_key']))
+            self.anthropic_model_var.set(settings.get('anthropic_model', defaults['anthropic_model']))
+            self.deepseek_api_key_var.set(settings.get('deepseek_api_key', defaults['deepseek_api_key']))
+            
             self.target_language.set(settings.get('target_language', defaults['target_language']))
             self.whisper_model_name_var.set(settings.get('whisper_model', defaults['whisper_model']))
             self.device_var.set(settings.get('device', defaults['device']))
@@ -1331,6 +1389,7 @@ class AppGUI:
             
             self._apply_theme() # Apply loaded theme
             self.update_compute_types() # Update compute types based on loaded device
+            self._update_translation_settings_ui() # Update UI based on loaded provider
             
             self.current_project_path = filepath
             self.root.title(f"{APP_TITLE} - {os.path.basename(filepath)}")
@@ -1417,3 +1476,69 @@ class AppGUI:
         self.stat_processed_files.set(f"Processed: {processed}")
         self.stat_pending_files.set(f"Pending: {pending}")
         self.stat_failed_files.set(f"Failed: {failed}") 
+
+    def _update_translation_settings_ui(self, event=None):
+        """Dynamically update translation settings UI based on selected provider."""
+        # Clear previous provider-specific widgets
+        for widget in self.provider_details_frame.winfo_children():
+            widget.destroy()
+
+        provider = self.translation_provider_var.get()
+        
+        # Common width for API key entries and model comboboxes
+        api_key_width = 30 
+        model_combo_width = 28
+
+        if provider == "Gemini":
+            gemini_frame = ttk.Frame(self.provider_details_frame)
+            gemini_frame.pack(fill=tk.X, pady=2)
+            ttk.Label(gemini_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
+            ttk.Entry(gemini_frame, textvariable=self.gemini_api_key_var, width=api_key_width, show="*").pack(side=tk.LEFT, fill=tk.X, expand=True)
+            # Gemini specific params (temperature, top_p, top_k) are in Advanced Settings dialog for now.
+
+        elif provider == "OpenAI":
+            openai_frame = ttk.Frame(self.provider_details_frame)
+            openai_frame.pack(fill=tk.X, pady=2)
+            
+            key_frame = ttk.Frame(openai_frame)
+            key_frame.pack(fill=tk.X, pady=(0,3))
+            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
+            ttk.Entry(key_frame, textvariable=self.openai_api_key_var, width=api_key_width, show="*").pack(side=tk.LEFT, fill=tk.X, expand=True)
+            
+            model_frame = ttk.Frame(openai_frame)
+            model_frame.pack(fill=tk.X)
+            ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT, padx=(0,5))
+            ttk.Combobox(
+                model_frame, 
+                textvariable=self.openai_model_var, 
+                values=OPENAI_MODELS, 
+                state="readonly", 
+                width=model_combo_width
+            ).pack(side=tk.LEFT)
+
+        elif provider == "Anthropic":
+            anthropic_frame = ttk.Frame(self.provider_details_frame)
+            anthropic_frame.pack(fill=tk.X, pady=2)
+
+            key_frame = ttk.Frame(anthropic_frame)
+            key_frame.pack(fill=tk.X, pady=(0,3))
+            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
+            ttk.Entry(key_frame, textvariable=self.anthropic_api_key_var, width=api_key_width, show="*").pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+            model_frame = ttk.Frame(anthropic_frame)
+            model_frame.pack(fill=tk.X)
+            ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT, padx=(0,5))
+            ttk.Combobox(
+                model_frame, 
+                textvariable=self.anthropic_model_var, 
+                values=ANTHROPIC_MODELS, 
+                state="readonly", 
+                width=model_combo_width
+            ).pack(side=tk.LEFT)
+            
+        elif provider == "DeepSeek":
+            deepseek_frame = ttk.Frame(self.provider_details_frame)
+            deepseek_frame.pack(fill=tk.X, pady=2)
+            ttk.Label(deepseek_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
+            ttk.Entry(deepseek_frame, textvariable=self.deepseek_api_key_var, width=api_key_width, show="*").pack(side=tk.LEFT, fill=tk.X, expand=True)
+            # DeepSeek model is fixed (DEEPSEEK_MODEL from config), so no model selection here.

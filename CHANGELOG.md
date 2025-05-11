@@ -4,6 +4,27 @@ Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.2.0] - 2025-05-12
+
+### Added
+- **Dukungan Berbagai API Terjemahan**: Integrasi dengan beberapa provider API terjemahan:
+  - OpenAI (GPT-4.1, GPT-4o, GPT-3.5-turbo, dll.)
+  - Anthropic Claude (Claude 3 Opus, Claude 3.5 Sonnet, dll.) 
+  - DeepSeek (melalui DeepSeek-chat)
+- **UI Pemilihan Provider Terjemahan**: Dialog pemilihan provider yang dinamis dengan konfigurasi spesifik untuk setiap provider
+- **Penyimpanan API Key & Model**: Semua API key dan pemilihan model setiap provider disimpan dalam konfigurasi
+- **UI Dinamis**: Antarmuka yang menyesuaikan diri dengan provider terjemahan yang dipilih, menampilkan input dan opsi yang relevan
+
+### Changed
+- Refactor fungsi terjemahan untuk mendukung berbagai provider API
+- Struktur konfigurasi diperluas untuk menyimpan pengaturan semua provider terjemahan
+- Perbaikan pada format dan indentasi kode di seluruh proyek
+
+### Fixed
+- Kesalahan indentasi dan struktur `try-except-finally` di `process_video_thread`
+- Berbagai masalah linting di `backend/translate.py`
+- Konsistensi penamaan variabel di seluruh aplikasi
+
 ## [2.1.1] - 2025-05-11
 
 ### Fixed
@@ -20,7 +41,7 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Simpan & Muat Proyek**: Simpan status antrean, data terproses, dan pengaturan ke file proyek (.ftgproj) dan muat kembali.
 - **Kustomisasi Parameter Gemini API**: Atur Temperature, Top-P, dan Top-K untuk API Gemini melalui Pengaturan Lanjutan.
 - **Pratinjau Video dengan Subtitle**: Buka video yang dipilih dengan file subtitle sementara yang dihasilkan.
-- **Peningkatan Tata Letak UI**: Mengadopsi tata letak berbasis panel yang lebih terstruktur (mirip Adobe) menggunakan PanedWindow untuk meningkatkan pengalaman pengguna.
+- **Peningkatan Tata Letak UI**: Mengadopsi tata letak berbasis panel yang lebih terstruktur menggunakan PanedWindow untuk meningkatkan pengalaman pengguna.
 
 ### Changed
 - Label versi aplikasi dihapus dari status bar UI.

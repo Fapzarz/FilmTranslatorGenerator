@@ -17,6 +17,8 @@ A simple desktop application for transcribing audio from video files using Faste
 *   **Project Save/Load**: Save your current queue, processed data, and settings into a `.ftgproj` file and load it back later.
 *   **Basic Subtitle Editor**: Edit the text and timestamps of generated subtitles directly within the application.
 *   **Preview Video with Subtitles**: Attempt to open the selected video with its generated subtitles in your default media player.
+*   **Multiple Translation API Support**: Choose between Google Gemini, OpenAI, Anthropic Claude, and DeepSeek for translations.
+*   **Model Selection for Providers**: Select specific models for OpenAI (GPT-4.1, GPT-4o, etc.) and Anthropic (Claude 3 Opus, Claude 3.5 Sonnet, etc.).
 *   Video preview with thumbnails and information
 *   **Multiple Output Format Support:** Choose between `SRT`, `VTT`, or `TXT` formats
 *   **Side-by-Side Comparison:** View original text and translation side-by-side
@@ -26,7 +28,11 @@ A simple desktop application for transcribing audio from video files using Faste
 *   **Advanced Settings:** Configure batch size, theme, accent color, and automatic features
 *   **Modular Structure:** Code organized in separate modules for easier development
 *   Video transcription using Faster-Whisper
-*   Text translation using Google Gemini API (`gemini-2.5-flash-preview-04-17`)
+*   Text translation using multiple AI providers:
+    * Google Gemini API (`gemini-2.5-flash-preview-04-17`)
+    * OpenAI API (GPT-4.1, GPT-4o, GPT-3.5-turbo, etc.)
+    * Anthropic API (Claude 3 Opus, Claude 3.5 Sonnet, etc.)
+    * DeepSeek API (via DeepSeek-chat)
 *   Comprehensive settings storage in `config.json`
 
 ### Requirements
@@ -34,7 +40,11 @@ A simple desktop application for transcribing audio from video files using Faste
 *   Python 3.8+
 *   `ffmpeg` (Must be installed and in your system PATH. Download from [https://ffmpeg.org/](https://ffmpeg.org/))
 *   CUDA Toolkit & cuDNN (Recommended for GPU acceleration with Faster-Whisper. Ensure compatible versions are installed)
-*   Google Gemini API Key (Get from [Google AI Studio](https://aistudio.google.com/app/apikey))
+*   API Keys (Choose at least one based on your preferred translation provider):
+    *   Google Gemini API Key (Get from [Google AI Studio](https://aistudio.google.com/app/apikey))
+    *   OpenAI API Key (Get from [OpenAI Platform](https://platform.openai.com/api-keys))
+    *   Anthropic API Key (Get from [Anthropic Console](https://console.anthropic.com/))
+    *   DeepSeek API Key (Get from [DeepSeek Platform](https://platform.deepseek.com/))
 
 ### Installation
 
@@ -68,8 +78,10 @@ A simple desktop application for transcribing audio from video files using Faste
     python main.py
     ```
 2.  In the application window:
-    *   Click "Browse..." to select your video file
-    *   Enter your Google Gemini API Key (will be saved for future use)
+    *   Click "Add Video(s)" to select your video file(s)
+    *   Select your preferred translation provider (Gemini, OpenAI, Anthropic, or DeepSeek)
+    *   Enter the API Key for your selected provider
+    *   If applicable, select the specific model for your provider
     *   Select the target translation language and output format
     *   Select Whisper settings (Model, Device, Compute Type)
     *   Click "Generate Subtitles"
@@ -117,8 +129,10 @@ Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunaka
 *   **Simpan/Muat Proyek**: Simpan antrean saat ini, data yang telah diproses, dan pengaturan ke dalam file `.ftgproj` dan muat kembali nanti.
 *   **Editor Subtitle Dasar**: Edit teks dan stempel waktu dari subtitle yang dihasilkan langsung di dalam aplikasi.
 *   **Pratinjau Video dengan Subtitle**: Coba buka video yang dipilih beserta subtitle yang dihasilkan di pemutar media default Anda.
+*   **Dukungan Berbagai API Terjemahan**: Pilih antara Google Gemini, OpenAI, Anthropic Claude, dan DeepSeek untuk terjemahan.
+*   **Pemilihan Model untuk Provider**: Pilih model spesifik untuk OpenAI (GPT-4.1, GPT-4o, dll.) dan Anthropic (Claude 3 Opus, Claude 3.5 Sonnet, dll.).
 *   Pratinjau video dengan thumbnail dan informasi
-*   **Dukungan Multiple Output Format:** Pilih antara format `SRT`, `VTT`, atau `TXT`
+*   **Dukungan Multiple Format Output:** Pilih antara format `SRT`, `VTT`, atau `TXT`
 *   **Perbandingan Side-by-Side:** Lihat teks asli dan terjemahan secara berdampingan
 *   **Pilihan Model Whisper:** Pilih antara `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3`
 *   **Pilihan Perangkat & Komputasi:** Pilih `cuda` atau `cpu` dan tipe komputasi yang sesuai (`float16`, `int8`, dll.)
@@ -126,7 +140,11 @@ Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunaka
 *   **Pengaturan Lanjutan:** Atur ukuran batch, tema, warna aksen, dan fitur otomatis
 *   **Modular Structure:** Kode diatur dalam modul terpisah untuk memudahkan pengembangan
 *   Transkripsi video menggunakan Faster-Whisper
-*   Terjemahan teks menggunakan Google Gemini API (`gemini-2.5-flash-preview-04-17`)
+*   Terjemahan teks menggunakan berbagai provider AI:
+    * Google Gemini API (`gemini-2.5-flash-preview-04-17`)
+    * OpenAI API (GPT-4.1, GPT-4o, GPT-3.5-turbo, dll.)
+    * Anthropic API (Claude 3 Opus, Claude 3.5 Sonnet, dll.) 
+    * DeepSeek API (melalui DeepSeek-chat)
 *   Penyimpanan pengaturan yang komprehensif di `config.json`
 
 ### Persyaratan
@@ -134,7 +152,11 @@ Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunaka
 *   Python 3.8+
 *   `ffmpeg` (Harus terinstal dan ada di PATH sistem Anda. Unduh dari [https://ffmpeg.org/](https://ffmpeg.org/))
 *   CUDA Toolkit & cuDNN (Direkomendasikan untuk akselerasi GPU dengan Faster-Whisper. Pastikan versi kompatibel terinstal)
-*   Google Gemini API Key (Dapatkan dari [Google AI Studio](https://aistudio.google.com/app/apikey))
+*   API Keys (Pilih setidaknya satu berdasarkan provider terjemahan yang Anda inginkan):
+    *   Google Gemini API Key (Dapatkan dari [Google AI Studio](https://aistudio.google.com/app/apikey))
+    *   OpenAI API Key (Dapatkan dari [OpenAI Platform](https://platform.openai.com/api-keys))
+    *   Anthropic API Key (Dapatkan dari [Anthropic Console](https://console.anthropic.com/))
+    *   DeepSeek API Key (Dapatkan dari [DeepSeek Platform](https://platform.deepseek.com/))
 
 ### Instalasi
 
@@ -168,8 +190,10 @@ Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunaka
     python main.py
     ```
 2.  Di jendela aplikasi:
-    *   Klik "Browse..." untuk memilih file video Anda
-    *   Masukkan Google Gemini API Key Anda (akan disimpan untuk penggunaan berikutnya)
+    *   Klik "Add Video(s)" untuk menambahkan file video ke antrean
+    *   Pilih provider terjemahan yang Anda inginkan (Gemini, OpenAI, Anthropic, atau DeepSeek)
+    *   Masukkan API Key untuk provider yang Anda pilih
+    *   Jika diperlukan, pilih model spesifik untuk provider Anda
     *   Pilih bahasa target terjemahan dan format output
     *   Pilih pengaturan Whisper (Model, Device, Compute Type)
     *   Klik "Generate Subtitles"
