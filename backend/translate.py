@@ -5,7 +5,7 @@ import re
 import google.generativeai as genai
 from config import DEFAULT_BATCH_SIZE
 
-def translate_text_gemini(api_key, text_segments, target_language, status_callback, batch_size=DEFAULT_BATCH_SIZE):
+def translate_text_gemini(api_key, text_segments, target_language, status_callback, batch_size=DEFAULT_BATCH_SIZE, gemini_temperature=0.2, gemini_top_p=0.95, gemini_top_k=40):
     """Translates text segments using Gemini API in batches with ultra-strict prompt."""
     if not api_key:
         status_callback("Error: Gemini API Key is missing.")
@@ -14,6 +14,11 @@ def translate_text_gemini(api_key, text_segments, target_language, status_callba
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17')
+        generation_config = genai.types.GenerationConfig(
+            temperature=gemini_temperature,
+            top_p=gemini_top_p,
+            top_k=gemini_top_k
+        )
         status_callback(f"Configured Gemini. Translating to {target_language}...")
     except Exception as e:
         status_callback(f"Error configuring Gemini: {e}")
@@ -47,8 +52,10 @@ def translate_text_gemini(api_key, text_segments, target_language, status_callba
         batch_prompt = "\n".join(prompt_lines)
 
         try:
-            response = model.generate_content(batch_prompt)
+            status_callback(f"VERBOSE: Sending prompt for batch {batch_num}:\n{batch_prompt[:200]}...", level="VERBOSE") # Log part of the prompt
+            response = model.generate_content(batch_prompt, generation_config=generation_config)
             response_text = response.text.strip()
+            status_callback(f"VERBOSE: Received response for batch {batch_num}:\n{response_text[:200]}...", level="VERBOSE") # Log part of the response
 
             # Attempt to parse the numbered list response
             # Simple split by newline, assuming Gemini follows instructions
@@ -96,8 +103,10 @@ def translate_text_gemini(api_key, text_segments, target_language, status_callba
                             f"Do NOT include any introductory phrases, explanations, or any text other than the translation itself.\n\n"
                             f"Dialogue: {segment['text'].strip()}"
                         )
-                        fallback_response = model.generate_content(fallback_prompt)
+                        status_callback(f"VERBOSE: Sending fallback prompt for segment {i+k+1}: {segment['text'].strip()[:50]}...", level="VERBOSE")
+                        fallback_response = model.generate_content(fallback_prompt, generation_config=generation_config)
                         fallback_text = fallback_response.text.strip()
+                        status_callback(f"VERBOSE: Received fallback response for segment {i+k+1}: {fallback_text[:50]}...", level="VERBOSE")
                         translated_segments.append({
                             'start': segment['start'],
                             'end': segment['end'],
@@ -124,8 +133,10 @@ def translate_text_gemini(api_key, text_segments, target_language, status_callba
                         f"Do NOT include any introductory phrases, explanations, or any text other than the translation itself.\n\n"
                         f"Dialogue: {segment['text'].strip()}"
                     )
-                    fallback_response = model.generate_content(fallback_prompt)
+                    status_callback(f"VERBOSE: Sending batch error fallback prompt for segment {i+k+1}: {segment['text'].strip()[:50]}...", level="VERBOSE")
+                    fallback_response = model.generate_content(fallback_prompt, generation_config=generation_config)
                     fallback_text = fallback_response.text.strip()
+                    status_callback(f"VERBOSE: Received batch error fallback response for segment {i+k+1}: {fallback_text[:50]}...", level="VERBOSE")
                     translated_segments.append({
                         'start': segment['start'],
                         'end': segment['end'],

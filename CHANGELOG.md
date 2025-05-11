@@ -4,6 +4,33 @@ Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.1.1] - 2025-05-11
+
+### Fixed
+- `UnboundLocalError` untuk `progress_action_frame` di `gui/app.py` karena urutan definisi dan pemaketan widget yang salah dalam `create_main_frame`.
+- `NameError` untuk `APP_VERSION` di `gui/app.py` karena tidak diimpor dari `config.py` (sebelum akhirnya dihapus dari UI).
+- Upaya perbaikan berkelanjutan untuk kesalahan indentasi dan struktur `try-except-finally` di `process_video_thread` dalam `gui/app.py` yang terdeteksi oleh linter.
+
+
+## [2.1] - 2025-05-11
+
+### Added
+- **Manajemen Antrean Video**: Tambah, hapus, dan proses beberapa file video secara berurutan.
+- **Editor Subtitle Dasar**: Edit teks dan timestamp subtitle yang dihasilkan langsung di aplikasi.
+- **Simpan & Muat Proyek**: Simpan status antrean, data terproses, dan pengaturan ke file proyek (.ftgproj) dan muat kembali.
+- **Kustomisasi Parameter Gemini API**: Atur Temperature, Top-P, dan Top-K untuk API Gemini melalui Pengaturan Lanjutan.
+- **Pratinjau Video dengan Subtitle**: Buka video yang dipilih dengan file subtitle sementara yang dihasilkan.
+- **Peningkatan Tata Letak UI**: Mengadopsi tata letak berbasis panel yang lebih terstruktur (mirip Adobe) menggunakan PanedWindow untuk meningkatkan pengalaman pengguna.
+
+### Changed
+- Label versi aplikasi dihapus dari status bar UI.
+- Model default Gemini API diverifikasi menggunakan versi `gemini-2.5-flash-preview-04-17`.
+
+### Fixed
+- `KeyError` saat memuat konfigurasi default untuk parameter Gemini API.
+- Berbagai kesalahan indentasi dan struktur `try-except` di `gui/app.py` (terdeteksi oleh linter).
+- `NameError` untuk `APP_VERSION` di `gui/app.py` saat menampilkan label versi (sebelum dihapus).
+
 ## [2.0] - 2025-05-10
 
 ### Added

@@ -11,7 +11,7 @@ def create_advanced_settings_dialog(parent, settings):
     """Create advanced settings dialog."""
     dialog = tk.Toplevel(parent)
     dialog.title("Advanced Settings")
-    dialog.geometry("400x300")
+    dialog.geometry("450x420")
     dialog.resizable(False, False)
     dialog.transient(parent)
     dialog.grab_set()
@@ -51,6 +51,41 @@ def create_advanced_settings_dialog(parent, settings):
     ttk.Combobox(accent_frame, textvariable=settings['accent_color_var'], 
                values=ACCENT_COLORS, state="readonly", width=10).pack(side=tk.LEFT, padx=5)
     
+    # --- Gemini API Settings ---
+    gemini_settings_frame = ttk.LabelFrame(settings_frame, text="Gemini API Parameters", padding="10")
+    gemini_settings_frame.pack(fill=tk.X, padx=5, pady=10)
+
+    # Temperature
+    temp_frame = ttk.Frame(gemini_settings_frame)
+    temp_frame.pack(fill=tk.X, padx=5, pady=3)
+    ttk.Label(temp_frame, text="Temperature (0.0-1.0):").pack(side=tk.LEFT, padx=5)
+    temp_entry = ttk.Entry(temp_frame, textvariable=settings['gemini_temperature_var'], width=10)
+    temp_entry.pack(side=tk.LEFT, padx=5)
+
+    # Top-P
+    top_p_frame = ttk.Frame(gemini_settings_frame)
+    top_p_frame.pack(fill=tk.X, padx=5, pady=3)
+    ttk.Label(top_p_frame, text="Top-P (0.0-1.0):").pack(side=tk.LEFT, padx=5)
+    top_p_entry = ttk.Entry(top_p_frame, textvariable=settings['gemini_top_p_var'], width=10)
+    top_p_entry.pack(side=tk.LEFT, padx=5)
+
+    # Top-K
+    top_k_frame = ttk.Frame(gemini_settings_frame)
+    top_k_frame.pack(fill=tk.X, padx=5, pady=3)
+    ttk.Label(top_k_frame, text="Top-K (integer > 0):").pack(side=tk.LEFT, padx=5)
+    top_k_entry = ttk.Entry(top_k_frame, textvariable=settings['gemini_top_k_var'], width=10)
+    top_k_entry.pack(side=tk.LEFT, padx=5)
+
+    # Extensive Logging
+    log_settings_frame = ttk.LabelFrame(settings_frame, text="Logging Settings", padding="10")
+    log_settings_frame.pack(fill=tk.X, padx=5, pady=10)
+
+    ext_log_frame = ttk.Frame(log_settings_frame)
+    ext_log_frame.pack(fill=tk.X, padx=5, pady=3)
+    ttk.Label(ext_log_frame, text="Enable Extensive Logging:").pack(side=tk.LEFT, padx=5)
+    ttk.Combobox(ext_log_frame, textvariable=settings['extensive_logging_var'], 
+                 values=["On", "Off"], state="readonly", width=8).pack(side=tk.LEFT, padx=5)
+
     # Buttons
     button_frame = ttk.Frame(settings_frame)
     button_frame.pack(fill=tk.X, padx=5, pady=10)
@@ -137,6 +172,9 @@ def create_notebook(parent):
     save_button = ttk.Button(output_actions, text="Save As...")
     save_button.pack(side=tk.LEFT, padx=5)
     
+    preview_sub_button = ttk.Button(output_actions, text="Preview with Subtitles")
+    preview_sub_button.pack(side=tk.LEFT, padx=5)
+    
     output_text = scrolledtext.ScrolledText(output_frame, wrap=tk.WORD, height=10)
     output_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
     output_text.configure(state='disabled')
@@ -165,11 +203,30 @@ def create_notebook(parent):
     translated_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
     translated_text.configure(state='disabled')
     
+    # Subtitle Editor Tab
+    editor_frame = ttk.Frame(notebook)
+    notebook.add(editor_frame, text="Subtitle Editor")
+
+    editor_actions_frame = ttk.Frame(editor_frame)
+    editor_actions_frame.pack(fill=tk.X, padx=5, pady=5)
+
+    # Placeholder for editor actions (e.g., Save changes to current item)
+    save_editor_button = ttk.Button(editor_actions_frame, text="Apply Changes to Current Item") 
+    # save_editor_button.pack(side=tk.LEFT, padx=5) # Add command later
+
+    editor_text = scrolledtext.ScrolledText(editor_frame, wrap=tk.WORD, height=10)
+    editor_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    # Start as disabled, enable when editable content is loaded
+    editor_text.configure(state='disabled') 
+    
     return notebook, {
         'log': status_text,
         'output': output_text,
         'original': original_text,
         'translated': translated_text,
         'copy_button': copy_button,
-        'save_button': save_button
+        'save_button': save_button,
+        'preview_sub_button': preview_sub_button,
+        'editor_text': editor_text, # Add new widget
+        'save_editor_button': save_editor_button # Add new button
     } 

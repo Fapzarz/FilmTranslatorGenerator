@@ -1,4 +1,4 @@
-# Film Translator Generator v2.0
+# Film Translator Generator
 
 [English](#english) | [Bahasa Indonesia](#bahasa-indonesia)
 
@@ -12,12 +12,17 @@ A simple desktop application for transcribing audio from video files using Faste
 
 ### Features
 
-*   Modern user interface with Sun Valley theme (sv-ttk)
+*   Modern user interface with Sun Valley theme (sv-ttk) and panel-based layout
+*   **Video Queue Management**: Add, remove, and process multiple video files sequentially.
+*   **Project Save/Load**: Save your current queue, processed data, and settings into a `.ftgproj` file and load it back later.
+*   **Basic Subtitle Editor**: Edit the text and timestamps of generated subtitles directly within the application.
+*   **Preview Video with Subtitles**: Attempt to open the selected video with its generated subtitles in your default media player.
 *   Video preview with thumbnails and information
 *   **Multiple Output Format Support:** Choose between `SRT`, `VTT`, or `TXT` formats
 *   **Side-by-Side Comparison:** View original text and translation side-by-side
 *   **Whisper Model Selection:** Choose between `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3`
 *   **Device & Computation Selection:** Choose `cuda` or `cpu` and the appropriate computation type (`float16`, `int8`, etc.)
+*   **Advanced Gemini API Settings**: Customize Temperature, Top-P, and Top-K for translations.
 *   **Advanced Settings:** Configure batch size, theme, accent color, and automatic features
 *   **Modular Structure:** Code organized in separate modules for easier development
 *   Video transcription using Faster-Whisper
@@ -103,14 +108,19 @@ Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunaka
 
 ### Fitur
 
-*   Antarmuka pengguna modern dengan tema Sun Valley (sv-ttk)
+*   Antarmuka pengguna modern dengan tema Sun Valley (sv-ttk) dan tata letak berbasis panel
+*   **Manajemen Antrean Video**: Tambah, hapus, dan proses beberapa file video secara berurutan.
+*   **Simpan/Muat Proyek**: Simpan antrean saat ini, data yang telah diproses, dan pengaturan ke dalam file `.ftgproj` dan muat kembali nanti.
+*   **Editor Subtitle Dasar**: Edit teks dan stempel waktu dari subtitle yang dihasilkan langsung di dalam aplikasi.
+*   **Pratinjau Video dengan Subtitle**: Coba buka video yang dipilih beserta subtitle yang dihasilkan di pemutar media default Anda.
 *   Pratinjau video dengan thumbnail dan informasi
 *   **Dukungan Multiple Output Format:** Pilih antara format `SRT`, `VTT`, atau `TXT`
 *   **Perbandingan Side-by-Side:** Lihat teks asli dan terjemahan secara berdampingan
 *   **Pilihan Model Whisper:** Pilih antara `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3`
 *   **Pilihan Perangkat & Komputasi:** Pilih `cuda` atau `cpu` dan tipe komputasi yang sesuai (`float16`, `int8`, dll.)
+*   **Pengaturan Lanjutan Gemini API**: Kustomisasi Temperature, Top-P, dan Top-K untuk terjemahan.
 *   **Pengaturan Lanjutan:** Atur ukuran batch, tema, warna aksen, dan fitur otomatis
-*   **Struktur Modular:** Kode diatur dalam modul terpisah untuk memudahkan pengembangan
+*   **Modular Structure:** Kode diatur dalam modul terpisah untuk memudahkan pengembangan
 *   Transkripsi video menggunakan Faster-Whisper
 *   Terjemahan teks menggunakan Google Gemini API (`gemini-2.5-flash-preview-04-17`)
 *   Penyimpanan pengaturan yang komprehensif di `config.json`
