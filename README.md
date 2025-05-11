@@ -90,7 +90,7 @@ This project uses a modular structure to facilitate development and maintenance:
 
 ### License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [GNU Affero General Public License v3 (AGPLv3)](LICENSE).
 
 ### Documentation
 
@@ -186,7 +186,7 @@ Proyek ini menggunakan struktur modular untuk memudahkan pengembangan dan pemeli
 
 ### Lisensi
 
-Proyek ini dilisensikan di bawah [MIT License](LICENSE).
+Proyek ini dilisensikan di bawah [GNU Affero General Public License v3 (AGPLv3)](LICENSE).
 
 ### Dokumentasi
 
