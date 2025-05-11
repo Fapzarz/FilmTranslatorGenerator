@@ -92,6 +92,10 @@ This project uses a modular structure to facilitate development and maintenance:
 
 This project is licensed under the [GNU Affero General Public License v3 (AGPLv3)](LICENSE).
 
+### Changelog
+
+For a detailed history of changes, please see the [CHANGELOG.md](CHANGELOG.md) file.
+
 ### Documentation
 
 More detailed documentation is available in the [GitHub repository](https://github.com/Fapzarz/FilmTranslatorGenerator).
@@ -187,6 +191,10 @@ Proyek ini menggunakan struktur modular untuk memudahkan pengembangan dan pemeli
 ### Lisensi
 
 Proyek ini dilisensikan di bawah [GNU Affero General Public License v3 (AGPLv3)](LICENSE).
+
+### Changelog
+
+Untuk riwayat perubahan yang detail, silakan lihat file [CHANGELOG.md](CHANGELOG.md).
 
 ### Dokumentasi
 
