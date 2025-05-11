@@ -16,7 +16,7 @@ import sys # For platform-specific operations
 import re # For parsing editor content later
 
 from config import (
-    APP_TITLE, CONFIG_FILE, HISTORY_FILE, get_default_config, LANGUAGES, 
+    APP_TITLE, CONFIG_FILE, get_default_config, LANGUAGES, 
     WHISPER_MODELS, DEVICES, COMPUTE_TYPES, OUTPUT_FORMATS, 
     GITHUB_URL, APP_VERSION, TRANSLATION_PROVIDERS, 
     OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODEL # Added ANTHROPIC_MODELS, DEEPSEEK_MODEL
@@ -40,7 +40,6 @@ class AppGUI:
         # Initialize variables
         self.video_queue = []  # List to store video file paths
         self.processed_file_data = {} # Stores status and results per file path
-        self.file_history = {} # Stores history of processed files across sessions
         self.current_processing_video = None # Path of the video currently being processed
         self.selected_video_in_queue = tk.StringVar() 
         self.current_project_path = None # Path to the currently open project file
@@ -92,16 +91,21 @@ class AppGUI:
         self.create_menu()
         self.create_main_frame()
         
-        # Load configuration and history
+        # Load configuration
         self._load_config()
-        self._load_history()
         self.update_compute_types()
         
         # Update theme based on loaded config
         self._apply_theme()
-        
-        # Set protocol handler for window close event
+
+        # Set up save on exit
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+    
+    def on_closing(self):
+        """Handle application closing: save config and quit."""
+        self.log_status("Application closing. Saving configuration...")
+        self._save_config() # Save current settings and history
+        self.root.quit() # Proceed to close the application
     
     def create_menu(self):
         """Create application menu bar"""
@@ -110,15 +114,13 @@ class AppGUI:
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Add Video(s) to Queue", command=self.add_videos_to_queue)
-        file_menu.add_command(label="Add from History", command=self.add_from_history)
-        file_menu.add_separator()
         file_menu.add_command(label="Load Project", command=self.load_project_dialog)
         file_menu.add_command(label="Save Project", command=self.save_project)
         file_menu.add_command(label="Save Project As...", command=self.save_project_as_dialog)
         file_menu.add_separator()
         file_menu.add_command(label="Save Subtitles", command=lambda: self.save_output_file())
         file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.on_closing)
+        file_menu.add_command(label="Exit", command=self.root.quit)
         menubar.add_cascade(label="File", menu=file_menu)
         
         # Settings menu
@@ -406,6 +408,7 @@ class AppGUI:
             self.log_status(f"Error loading config: {e}. Using defaults.", level="ERROR")
             config_data = defaults
 
+        # Load main settings
         self.translation_provider_var.set(config_data.get('translation_provider', defaults['translation_provider']))
         self.gemini_api_key_var.set(config_data.get('gemini_api_key', defaults['gemini_api_key']))
         self.openai_api_key_var.set(config_data.get('openai_api_key', defaults['openai_api_key']))
@@ -430,10 +433,26 @@ class AppGUI:
         self.gemini_top_k_var.set(int(config_data.get('gemini_top_k', defaults['gemini_top_k'])))
         self.extensive_logging_var.set(config_data.get('extensive_logging', defaults['extensive_logging']))
 
+        # Load persisted queue and processed data
+        self.video_queue = config_data.get('video_queue_history', [])
+        self.processed_file_data = config_data.get('processed_file_data_history', {})
+
+        # Repopulate listbox from loaded history
+        self.video_listbox.delete(0, tk.END) # Clear existing items
+        for video_path in self.video_queue:
+            file_info = self.processed_file_data.get(video_path, {'status': 'Unknown'}) # Default if somehow missing
+            status = file_info.get('status', 'Unknown')
+            self.video_listbox.insert(tk.END, f"[{status}] {os.path.basename(video_path)}")
+        
         self.theme_var.set(config_data.get('theme', defaults['theme']))
         self._apply_theme() # Apply theme after loading
         self.update_compute_types() # Update compute types based on device
         self._update_translation_settings_ui() # IMPORTANT: Update UI after loading provider and keys
+        self._update_queue_statistics() # Update statistics display
+
+        if self.video_listbox.size() > 0:
+            self.video_listbox.selection_set(0) # Select the first item
+            self.on_video_select_in_queue() # Trigger UI update for the selection
 
     def _save_config(self):
         """Save current configuration to JSON file."""
@@ -468,7 +487,10 @@ class AppGUI:
                 'gemini_temperature': self.gemini_temperature_var.get(),
                 'gemini_top_p': self.gemini_top_p_var.get(),
                 'gemini_top_k': self.gemini_top_k_var.get(),
-                'extensive_logging': self.extensive_logging_var.get()
+                'extensive_logging': self.extensive_logging_var.get(),
+                # Persist queue and processed data history
+                'video_queue_history': self.video_queue,
+                'processed_file_data_history': self.processed_file_data
             }
             with open(CONFIG_FILE, 'w') as f:
                 json.dump(config_data, f, indent=4)
@@ -816,256 +838,209 @@ class AppGUI:
             return False
 
     def process_video_thread(self):
-        """The main processing thread that transcribes, translates, and outputs subtitle content."""
-        try:
-            selected_filepath = self.current_processing_video
-            if not selected_filepath or not os.path.exists(selected_filepath):
-                self.update_progress("No valid file selected", is_error=True)
-                return
+        """Runs the transcription and translation in a separate thread for files in the queue."""
+        
+        original_button_text = self.generate_button.cget("text")
+        self.generate_button.config(text="Processing...", state=tk.DISABLED)
+
+        for video_idx, video_file in enumerate(self.video_queue):
+            if self.processed_file_data[video_file]['status'] == 'Done':
+                self.log_status(f"Skipping {os.path.basename(video_file)}, already processed.")
+                continue
+
+            self.current_processing_video = video_file
+            self.video_listbox.delete(video_idx)
+            self.video_listbox.insert(video_idx, f"[Processing] {os.path.basename(video_file)}")
+            self.video_listbox.selection_clear(0, tk.END)
+            self.video_listbox.selection_set(video_idx)
+            self.video_listbox.see(video_idx)
+            self.root.update_idletasks()
+            self._update_queue_statistics()
+
+            self.transcribed_segments = None
+            self.translated_segments = None
+            self.current_output = None
+
+            try:  # Main try for processing a single video file
+                self.update_progress(f"Starting ({video_idx+1}/{len(self.video_queue)}): {os.path.basename(video_file)}...")
+                self.log_status(f"--- Starting Process for {os.path.basename(video_file)} ({video_idx+1}/{len(self.video_queue)}) ---")
+                if video_idx == self.video_listbox.curselection()[0] if self.video_listbox.curselection() else False:
+                    self.display_output("")
+
+                self.processed_file_data[video_file]['status'] = 'Processing_Whisper'
                 
-            # Show the currently processing file at the top of the window
-            self.root.title(f"{APP_TITLE} - Processing: {os.path.basename(selected_filepath)}")
-            
-            # Update status in data and listbox
-            self.processed_file_data[selected_filepath]['status'] = 'Processing'
-            self._update_listbox_status_for_path(selected_filepath, 'Processing')
-            
-            # Check if config is missing essential parameters
-            translation_provider = self.translation_provider_var.get()
-            if translation_provider == "Gemini" and not self.gemini_api_key_var.get():
-                self.update_progress("Gemini API key is missing in settings", is_error=True)
-                self.processed_file_data[selected_filepath]['status'] = 'Failed'
-                self._update_listbox_status_for_path(selected_filepath, 'Failed')
-                return
-            elif translation_provider == "OpenAI" and not self.openai_api_key_var.get():
-                self.update_progress("OpenAI API key is missing in settings", is_error=True)
-                self.processed_file_data[selected_filepath]['status'] = 'Failed'
-                self._update_listbox_status_for_path(selected_filepath, 'Failed')
-                return
-            elif translation_provider == "Anthropic" and not self.anthropic_api_key_var.get():
-                self.update_progress("Anthropic API key is missing in settings", is_error=True)
-                self.processed_file_data[selected_filepath]['status'] = 'Failed'
-                self._update_listbox_status_for_path(selected_filepath, 'Failed')
-                return
-            elif translation_provider == "DeepSeek" and not self.deepseek_api_key_var.get():
-                self.update_progress("DeepSeek API key is missing in settings", is_error=True)
-                self.processed_file_data[selected_filepath]['status'] = 'Failed'
-                self._update_listbox_status_for_path(selected_filepath, 'Failed')
-                return
-            
-            # STEP 1: Load Whisper model if not already loaded
-            self.update_progress("Loading Whisper model...")
-            if not self._load_whisper_model_sync():
-                self.update_progress("Failed to load Whisper model.", is_error=True)
-                self.processed_file_data[selected_filepath]['status'] = 'Failed'
-                self._update_listbox_status_for_path(selected_filepath, 'Failed')
-                self._update_queue_statistics()
-                return
-            
-            # STEP 2: Transcribe the video using Whisper
-            language_code = self.target_language.get()  # Original language - we'll auto-detect it
-            self.update_progress("Transcribing video with Whisper...")
-            try:
-                transcribed_segments = transcribe_video(
-                    video_path=selected_filepath,
-                    whisper_model=self.whisper_model,
-                    status_callback=self.log_status
-                )
+                                # Initial checks
+                api_key_val = self.gemini_api_key_var.get()
+                target_lang_val = self.target_language.get()
+
+                if not video_file or not os.path.exists(video_file):
+                    self.log_status(f"Error: Video file not found: {video_file}")
+                    self.update_progress(f"Error: File not found {os.path.basename(video_file)}", is_error=True)
+                    self.processed_file_data[video_file]['status'] = 'Error_FileNotFound'
+                    continue
                 
-                if not transcribed_segments or len(transcribed_segments) == 0:
-                    self.update_progress("Error: No transcribed segments were generated.", is_error=True)
-                    self.processed_file_data[selected_filepath]['status'] = 'Failed'
-                    self._update_listbox_status_for_path(selected_filepath, 'Failed')
-                    self._update_queue_statistics()
-                    return
-                    
-                self.update_progress(f"Transcription complete. {len(transcribed_segments)} segments found.")
+                if not ((self.translation_provider_var.get() == "Gemini" and api_key_val) or
+                        (self.translation_provider_var.get() == "OpenAI" and self.openai_api_key_var.get()) or
+                        (self.translation_provider_var.get() == "Anthropic" and self.anthropic_api_key_var.get()) or
+                        (self.translation_provider_var.get() == "DeepSeek" and self.deepseek_api_key_var.get())):
+                    # Simplified API key check: if selected provider needs a key and it's missing.
+                    missing_key_provider = self.translation_provider_var.get()
+                    messagebox.showerror("Error", f"API Key for {missing_key_provider} is missing.")
+                    self.log_status(f"Error: API Key for {missing_key_provider} missing. Halting queue.")
+                    self.update_progress(f"Error: API Key for {missing_key_provider} missing", is_error=True)
+                    self.processed_file_data[video_file]['status'] = 'Error_Config'
+                    break  # Stop queue processing for missing API key
+
+                if not target_lang_val:
+                    messagebox.showerror("Error", "Please select a target language.")
+                    self.log_status("Error: Target language not selected. Halting queue.")
+                    self.update_progress("Error: No target language", is_error=True)
+                    self.processed_file_data[video_file]['status'] = 'Error_Config'
+                    break  # Stop queue processing
+
+                # All initial checks passed, proceed with core processing
+                self._save_config()  # Save general app settings
+
+                try:  # For batch_size conversion
+                    batch_size = int(self.batch_size_var.get())
+                    if batch_size <= 0:
+                        batch_size = get_default_config()['batch_size']
+                except (ValueError, TypeError):
+                    batch_size = get_default_config()['batch_size']
+
+                self.update_progress(f"Loading Whisper model for {os.path.basename(video_file)}...")
+                if not self._load_whisper_model_sync():
+                    self.log_status(f"--- Process Failed (Whisper Model Load) for {os.path.basename(video_file)} ---")
+                    self.update_progress("Failed to load Whisper model", is_error=True)
+                    self.processed_file_data[video_file]['status'] = 'Error_WhisperModel'
+                    continue  # Skip to next file
+                
+                # Whisper model loaded, proceed to transcription
+                self.update_progress(f"Transcribing {os.path.basename(video_file)}...")
+                self.log_status(f"Starting transcription for {os.path.basename(video_file)}...")
+                self.processed_file_data[video_file]['status'] = 'Transcribing'
+                transcribed_segments = transcribe_video(self.whisper_model, video_file, self.log_status)
+                self.processed_file_data[video_file]['transcribed_segments'] = transcribed_segments
                 self.transcribed_segments = transcribed_segments
-                self.processed_file_data[selected_filepath]['transcribed_segments'] = transcribed_segments
+
+                if not transcribed_segments:
+                    self.log_status(f"--- Process Failed (Transcription) for {os.path.basename(video_file)} ---")
+                    self.update_progress(f"Transcription failed for {os.path.basename(video_file)}", is_error=True)
+                    self.processed_file_data[video_file]['status'] = 'Error_Transcription'
+                    continue
                 
-            except Exception as e:
-                self.update_progress(f"Transcription Error: {e}", is_error=True)
-                self.log_status(f"Transcription failed with error: {str(e)}", level="ERROR")
-                self.processed_file_data[selected_filepath]['status'] = 'Failed'
-                self._update_listbox_status_for_path(selected_filepath, 'Failed')
-                self._update_queue_statistics()
-                return
-            
-            # STEP 3: Translate the transcribed text
-            self.update_progress("Translating text...")
-            try:
-                # Get API keys and other settings for translation
-                target_language = self.target_language.get()
+                segments_count = len(transcribed_segments)
+                self.update_progress(f"Transcribed {segments_count} segments for {os.path.basename(video_file)}")
+                self.log_status(f"Transcription completed for {os.path.basename(video_file)} with {segments_count} segments")
+
+                # Proceed to translation only if transcription was successful
+                self.update_progress(f"Translating {os.path.basename(video_file)} to {target_lang_val}...")
+                self.log_status(f"Starting translation for {os.path.basename(video_file)} to {target_lang_val}...")
+                self.processed_file_data[video_file]['status'] = 'Translating'
                 
-                # Gather provider-specific details
-                api_key = None
-                model = None
-                provider = self.translation_provider_var.get()
+                selected_provider = self.translation_provider_var.get()
+                provider_config = {
+                    'name': selected_provider,
+                }
                 
-                if provider == "Gemini":
-                    api_key = self.gemini_api_key_var.get()
-                    temperature = self.gemini_temperature_var.get()
-                    top_p = self.gemini_top_p_var.get()
-                    top_k = self.gemini_top_k_var.get()
-                    batch_size = int(self.batch_size_var.get())
-                    
-                    translated_segments = translate_text(
-                        text_segments=transcribed_segments,
-                        target_language=target_language,
-                        api_key=api_key,
-                        provider=provider,
-                        status_callback=self.log_status,
-                        batch_size=batch_size,
-                        gemini_temperature=temperature,
-                        gemini_top_p=top_p,
-                        gemini_top_k=top_k
-                    )
-                elif provider == "OpenAI":
-                    api_key = self.openai_api_key_var.get()
-                    model = self.openai_model_var.get()
-                    batch_size = int(self.batch_size_var.get())
-                    
-                    translated_segments = translate_text(
-                        text_segments=transcribed_segments,
-                        target_language=target_language,
-                        api_key=api_key,
-                        provider=provider,
-                        model=model,
-                        status_callback=self.log_status,
-                        batch_size=batch_size
-                    )
-                elif provider == "Anthropic":
-                    api_key = self.anthropic_api_key_var.get()
-                    model = self.anthropic_model_var.get()
-                    batch_size = int(self.batch_size_var.get())
-                    
-                    translated_segments = translate_text(
-                        text_segments=transcribed_segments,
-                        target_language=target_language,
-                        api_key=api_key,
-                        provider=provider,
-                        model=model,
-                        status_callback=self.log_status,
-                        batch_size=batch_size
-                    )
-                elif provider == "DeepSeek":
-                    api_key = self.deepseek_api_key_var.get()
-                    model = DEEPSEEK_MODEL # Fixed model from config
-                    batch_size = int(self.batch_size_var.get())
-                    
-                    translated_segments = translate_text(
-                        text_segments=transcribed_segments,
-                        target_language=target_language,
-                        api_key=api_key,
-                        provider=provider,
-                        model=model,
-                        status_callback=self.log_status,
-                        batch_size=batch_size
-                    )
-                else:
-                    raise ValueError(f"Unsupported translation provider: {provider}")
-                
-                if not translated_segments or len(translated_segments) != len(transcribed_segments):
-                    error_msg = f"Translation mismatch: Got {len(translated_segments) if translated_segments else 0} segments, expected {len(transcribed_segments)}"
-                    self.update_progress(error_msg, is_error=True)
-                    raise ValueError(error_msg)
-                    
-                self.update_progress(f"Translation complete using {provider}.")
+                # Add provider-specific configurations
+                if selected_provider == "Gemini":
+                    provider_config['gemini_api_key'] = self.gemini_api_key_var.get()
+                    provider_config['gemini_temperature'] = self.gemini_temperature_var.get()
+                    provider_config['gemini_top_p'] = self.gemini_top_p_var.get()
+                    provider_config['gemini_top_k'] = self.gemini_top_k_var.get()
+                elif selected_provider == "OpenAI":
+                    provider_config['openai_api_key'] = self.openai_api_key_var.get()
+                    provider_config['openai_model'] = self.openai_model_var.get()
+                elif selected_provider == "Anthropic":
+                    provider_config['anthropic_api_key'] = self.anthropic_api_key_var.get()
+                    provider_config['anthropic_model'] = self.anthropic_model_var.get()
+                elif selected_provider == "DeepSeek":
+                    provider_config['deepseek_api_key'] = self.deepseek_api_key_var.get()
+                    # DeepSeek model is fixed
+
+                translated_segments = translate_text(
+                    provider_config, transcribed_segments, target_lang_val,
+                    self.log_status, batch_size
+                )
+                self.processed_file_data[video_file]['translated_segments'] = translated_segments
                 self.translated_segments = translated_segments
-                self.processed_file_data[selected_filepath]['translated_segments'] = translated_segments
                 
-            except Exception as e:
-                self.update_progress(f"Translation Error: {e}", is_error=True)
-                self.log_status(f"Translation failed with error: {str(e)}", level="ERROR")
-                self.processed_file_data[selected_filepath]['status'] = 'Failed'
-                self._update_listbox_status_for_path(selected_filepath, 'Failed')
-                self._update_queue_statistics()
-                return
-            
-            # STEP 4: Format the output according to the chosen format
-            self.update_progress("Formatting output...")
-            try:
-                output_format = self.output_format_var.get()
-                formatted_output = format_output(self.translated_segments, output_format)
+                if not translated_segments:
+                    self.log_status(f"--- Process Failed (Translation) for {os.path.basename(video_file)} ---")
+                    self.update_progress(f"Translation failed for {os.path.basename(video_file)}", is_error=True)
+                    self.processed_file_data[video_file]['status'] = 'Error_Translation'
+                    continue
                 
-                if not formatted_output:
-                    self.update_progress("Error formatting output.", is_error=True)
-                    self.processed_file_data[selected_filepath]['status'] = 'Failed'
-                    self._update_listbox_status_for_path(selected_filepath, 'Failed')
-                    self._update_queue_statistics()
-                    return
-                    
-                self.current_output = formatted_output
-                self.processed_file_data[selected_filepath]['output_content'] = formatted_output
-                self.processed_file_data[selected_filepath]['output_format'] = output_format
+                # Translation successful, format output
+                output_format_val = self.output_format_var.get()
+                self.update_progress(f"Formatting output ({output_format_val}) for {os.path.basename(video_file)}...")
+                self.log_status(f"Creating output in {output_format_val} for {os.path.basename(video_file)}...")
+                current_output_for_file = format_output(translated_segments, output_format_val)
+                self.processed_file_data[video_file]['output_content'] = current_output_for_file
+                self.current_output = current_output_for_file
                 
-                # Display the output
-                self.display_output(formatted_output)
-                self.update_comparison_view()  # Show side-by-side comparison
+                if video_idx == self.video_listbox.curselection()[0] if self.video_listbox.curselection() else False:
+                    self.display_output(current_output_for_file)
+                self.update_comparison_view()
                 
-                # Save output if auto-save is enabled
                 if self.auto_save_var.get() == "On":
-                    base, _ = os.path.splitext(selected_filepath)
-                    output_filepath = f"{base}.{output_format}"
+                    self.update_progress(f"Auto-saving output for {os.path.basename(video_file)}...")
+                    base, _ = os.path.splitext(video_file)
+                    auto_save_path = f"{base}.{output_format_val}"
                     try:
-                        with open(output_filepath, 'w', encoding='utf-8') as f:
-                            f.write(formatted_output)
-                        self.log_status(f"Auto-saved output to: {output_filepath}")
-                        self.processed_file_data[selected_filepath]['auto_saved_file'] = output_filepath
-                    except Exception as e:
-                        self.log_status(f"Auto-save failed: {e}", level="ERROR")
+                        with open(auto_save_path, 'w', encoding='utf-8') as f:
+                            f.write(current_output_for_file)
+                        self.log_status(f"Auto-saved: {auto_save_path}")
+                    except Exception as e_save:
+                        self.log_status(f"Error auto-saving {auto_save_path}: {e_save}")
+                
+                self.log_status(f"--- Process Finished Successfully for {os.path.basename(video_file)} ---")
+                self.update_progress(f"Completed: {os.path.basename(video_file)}", is_complete=True)
+                self.processed_file_data[video_file]['status'] = 'Done'
             
-                # Update status
-                self.processed_file_data[selected_filepath]['status'] = 'Done'
-                self._update_listbox_status_for_path(selected_filepath, 'Done')
-                self.update_progress("Processing Complete!", is_complete=True)
+            except Exception as e:  # Catch-all for the current video file processing
+                error_msg = str(e)
+                self.log_status(f"Unhandled error processing {os.path.basename(video_file)}: {error_msg}")
+                messagebox.showerror("Processing Error", f"An unexpected error occurred with {os.path.basename(video_file)}: {error_msg}")
+                self.processed_file_data.setdefault(video_file, {})  # Ensure dict entry exists
+                if not self.processed_file_data[video_file].get('status', '').startswith('Error_'):
+                    self.processed_file_data[video_file]['status'] = 'Error_Generic'
+                # If it was already an Error_Config, Error_FileNotFound etc., it remains that.
+            
+            finally:  # This finally block executes for each video file in the loop
+                # Update listbox with the final status for this item
+                final_status = self.processed_file_data.get(video_file, {}).get('status', 'Error_Unknown')
+                # Check if item still exists in listbox (it might if error was before listbox update)
+                if video_idx < self.video_listbox.size() and self.video_listbox.get(video_idx).startswith("[Processing]"):
+                    self.video_listbox.delete(video_idx)
+                    self.video_listbox.insert(video_idx, f"[{final_status}] {os.path.basename(video_file)}")
                 
-                # Update history
-                self._save_history()
-                
-            except Exception as e:
-                self.update_progress(f"Error formatting output: {e}", is_error=True)
-                self.log_status(f"Formatting failed with error: {str(e)}", level="ERROR")
-                self.processed_file_data[selected_filepath]['status'] = 'Failed'
-                self._update_listbox_status_for_path(selected_filepath, 'Failed')
-                
-        except Exception as e:
-            self.update_progress(f"Processing Error: {e}", is_error=True)
-            self.log_status(f"Processing failed with error: {str(e)}", level="ERROR")
-            if self.current_processing_video:
-                self.processed_file_data[self.current_processing_video]['status'] = 'Failed'
-                self._update_listbox_status_for_path(self.current_processing_video, 'Failed')
-        
-        # Reset window title in all cases to avoid showing "Processing" if already done
-        self.root.title(APP_TITLE if not self.current_project_path else f"{APP_TITLE} - {os.path.basename(self.current_project_path)}")
-        
-        # Update queue statistics to reflect current state
-        self._update_queue_statistics()
+                self._update_queue_statistics()
+                self.current_processing_video = None
+                if video_idx < self.video_listbox.size():
+                    self.video_listbox.selection_clear(0, tk.END)
+                    self.video_listbox.selection_set(video_idx)
+                    self.video_listbox.see(video_idx)
+                self.on_video_select_in_queue()
+                gc.collect()  # Clean up memory after each file
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+
+        # After the loop finishes (or breaks due to API key/target lang error)
+        self.generate_button.config(text=original_button_text, state=tk.NORMAL)
+        self.update_progress("Queue processing finished." if not self.current_processing_video else "Queue processing interrupted.", is_complete=not self.current_processing_video)
+        self.log_status("--- Queue Processing Finished ---")
+        self._update_queue_statistics()  # Final stat update
+        self.current_processing_video = None
 
     def start_processing(self):
         """Starts the processing in a new thread to avoid freezing the GUI."""
         if not self.video_queue:
             messagebox.showinfo("Info", "Video queue is empty. Please add videos to process.")
             return
-            
-        # Get the selected video from the queue
-        selected_indices = self.video_listbox.curselection()
-        if not selected_indices:
-            if self.video_listbox.size() > 0:
-                # If nothing selected but queue has items, select the first one
-                self.video_listbox.selection_set(0)
-                selected_indices = (0,)
-            else:
-                messagebox.showinfo("Info", "No video selected. Please select a video from the queue.")
-                return
-        
-        # Get the selected video path
-        selected_index = selected_indices[0]
-        self.current_processing_video = self.video_queue[selected_index]
-        
-        # Start processing in a separate thread
         processing_thread = threading.Thread(target=self.process_video_thread, daemon=True)
-        processing_thread.start()
+        processing_thread.start() 
 
     def preview_with_subtitles(self):
         """Saves the current output of the selected video as a temporary subtitle file and attempts to open the video with it."""
@@ -1597,163 +1572,3 @@ class AppGUI:
             ttk.Label(deepseek_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
             ttk.Entry(deepseek_frame, textvariable=self.deepseek_api_key_var, width=api_key_width, show="*").pack(side=tk.LEFT, fill=tk.X, expand=True)
             # DeepSeek model is fixed (DEEPSEEK_MODEL from config), so no model selection here.
-
-    def _load_history(self):
-        """Load history of processed files from JSON file."""
-        try:
-            if os.path.exists(HISTORY_FILE):
-                with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-                    self.file_history = json.load(f)
-                self.log_status(f"Loaded {len(self.file_history)} items from processing history.")
-            else:
-                self.file_history = {}
-        except Exception as e:
-            self.log_status(f"Error loading processing history: {e}. Starting with empty history.", level="ERROR")
-            self.file_history = {}
-    
-    def _save_history(self):
-        """Save history of processed files to JSON file."""
-        try:
-            # Update history with the latest processed files data
-            for filepath, file_data in self.processed_file_data.items():
-                if file_data.get('status') == 'Done':
-                    # Only store essential metadata in history to avoid large files
-                    self.file_history[filepath] = {
-                        'last_processed': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        'target_language': self.target_language.get(),
-                        'whisper_model': self.whisper_model_name_var.get(),
-                        'translation_provider': self.translation_provider_var.get(),
-                        'output_format': self.output_format_var.get()
-                    }
-            
-            # Save to file
-            with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
-                json.dump(self.file_history, f, indent=4)
-            self.log_status(f"Processing history saved with {len(self.file_history)} items.")
-        except Exception as e:
-            self.log_status(f"Error saving processing history: {e}", level="ERROR")
-    
-    def add_from_history(self):
-        """Show a dialog with previously processed files and add selected ones to the queue."""
-        if not self.file_history:
-            messagebox.showinfo("History", "No processing history found.")
-            return
-        
-        # Create a dialog window
-        history_dialog = tk.Toplevel(self.root)
-        history_dialog.title("Processing History")
-        history_dialog.geometry("700x500")
-        history_dialog.minsize(600, 400)
-        history_dialog.grab_set()  # Make it modal
-        
-        # Create a frame to hold the history list
-        frame = ttk.Frame(history_dialog, padding="10")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Create header and instructions
-        ttk.Label(frame, text="Select files from your processing history to add to the queue:", 
-                 font=("", 10, "bold")).pack(anchor="w", pady=(0, 10))
-        
-        # Create a frame for the history listbox and scrollbar
-        list_frame = ttk.Frame(frame)
-        list_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-        
-        # Create columns for the listbox
-        history_list = ttk.Treeview(list_frame, columns=("File", "Date", "Language", "Model", "Provider"), 
-                                   show="headings", selectmode="extended")
-        history_list.heading("File", text="Filename")
-        history_list.heading("Date", text="Processed Date")
-        history_list.heading("Language", text="Language")
-        history_list.heading("Model", text="Whisper Model")
-        history_list.heading("Provider", text="Translation Provider")
-        
-        history_list.column("File", width=200)
-        history_list.column("Date", width=150)
-        history_list.column("Language", width=100)
-        history_list.column("Model", width=100)
-        history_list.column("Provider", width=100)
-        
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=history_list.yview)
-        history_list.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        history_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        # Populate the listbox with history data
-        for filepath, details in self.file_history.items():
-            if os.path.exists(filepath):  # Only show files that still exist
-                history_list.insert("", "end", values=(
-                    os.path.basename(filepath),
-                    details.get('last_processed', 'Unknown'),
-                    details.get('target_language', 'Unknown'),
-                    details.get('whisper_model', 'Unknown'),
-                    details.get('translation_provider', 'Unknown')
-                ), tags=(filepath,))
-            
-        # Store filepath in tags for retrieval
-        for i, (filepath, _) in enumerate(self.file_history.items()):
-            if os.path.exists(filepath):
-                history_list.item(i, tags=(filepath,))
-        
-        # Create buttons
-        button_frame = ttk.Frame(frame)
-        button_frame.pack(fill=tk.X, pady=10)
-        
-        def add_selected_files():
-            selected_items = history_list.selection()
-            if not selected_items:
-                messagebox.showinfo("Selection", "No files selected.")
-                return
-                
-            # Get file paths from selections using tags
-            filepaths = []
-            for item in selected_items:
-                item_values = history_list.item(item, "values")
-                item_tags = history_list.item(item, "tags")
-                if item_tags:
-                    filepath = item_tags[0]
-                    filepaths.append(filepath)
-            
-            # Add selected files to queue
-            for filepath in filepaths:
-                if filepath not in self.video_queue and os.path.exists(filepath):
-                    self.video_queue.append(filepath)
-                    self.processed_file_data[filepath] = {'status': 'Pending', 'transcribed_segments': None, 'translated_segments': None, 'output_content': None}
-                    self.video_listbox.insert(tk.END, f"[Pending] {os.path.basename(filepath)}")
-                    self.log_status(f"Added from history: {filepath}")
-            
-            self._update_queue_statistics()
-            history_dialog.destroy()
-        
-        def clear_history():
-            if messagebox.askyesno("Clear History", "Are you sure you want to clear all processing history?"):
-                self.file_history = {}
-                self._save_history()
-                history_dialog.destroy()
-                messagebox.showinfo("History", "Processing history has been cleared.")
-        
-        ttk.Button(button_frame, text="Add Selected", command=add_selected_files).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Cancel", command=history_dialog.destroy).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Clear History", command=clear_history).pack(side=tk.RIGHT, padx=5)
-    
-    def on_closing(self):
-        """Handle application closing - save config and history."""
-        self._save_config()
-        self._save_history()
-        self.root.destroy()
-
-    def _update_listbox_status_for_path(self, filepath, status):
-        """Update the status shown in the listbox for a given file path."""
-        try:
-            # Find the index of the filepath in self.video_queue
-            if filepath in self.video_queue:
-                queue_index = self.video_queue.index(filepath)
-                # Update the listbox item at that index
-                self.video_listbox.delete(queue_index)
-                self.video_listbox.insert(queue_index, f"[{status}] {os.path.basename(filepath)}")
-                # If this was the selected item, reselect it
-                selected_indices = self.video_listbox.curselection()
-                if selected_indices and selected_indices[0] == queue_index:
-                    self.video_listbox.selection_set(queue_index)
-        except Exception as e:
-            self.log_status(f"Error updating listbox status: {e}", level="ERROR")

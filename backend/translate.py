@@ -84,7 +84,7 @@ def _translate_with_gemini(gemini_api_key, text_segments, target_language, statu
             
             if actual_count != expected_count:
                 status_callback(f"Warning: Gemini Batch {batch_num} - Slight mismatch (expected {expected_count}, got {actual_count}). Proceeding with tolerance.", level="WARNING")
-                
+            
             count_to_use = min(expected_count, actual_count)
             for j in range(count_to_use):
                 # Preserve the original timestamps exactly
