@@ -408,16 +408,16 @@ class AppGUI:
         self.openai_model_var.set(config_data.get('openai_model', defaults['openai_model']))
         self.anthropic_model_var.set(config_data.get('anthropic_model', defaults['anthropic_model']))
         
-        self.target_language.set(config_data.get('target_language', defaults['target_language']))
-        self.whisper_model_name_var.set(config_data.get('whisper_model', defaults['whisper_model']))
-        self.device_var.set(config_data.get('device', defaults['device']))
-        self.compute_type_var.set(config_data.get('compute_type', defaults['compute_type']))
-        self.theme_var.set(config_data.get('theme', defaults['theme']))
-        self.accent_color_var.set(config_data.get('accent_color', defaults['accent_color']))
-        self.batch_size_var.set(str(config_data.get('batch_size', defaults['batch_size'])))
-        self.output_format_var.set(config_data.get('output_format', defaults['output_format']))
-        self.preview_var.set(config_data.get('preview', defaults['preview']))
-        self.auto_save_var.set(config_data.get('auto_save', defaults['auto_save']))
+                self.target_language.set(config_data.get('target_language', defaults['target_language']))
+                self.whisper_model_name_var.set(config_data.get('whisper_model', defaults['whisper_model']))
+                self.device_var.set(config_data.get('device', defaults['device']))
+                self.compute_type_var.set(config_data.get('compute_type', defaults['compute_type']))
+                self.theme_var.set(config_data.get('theme', defaults['theme']))
+                self.accent_color_var.set(config_data.get('accent_color', defaults['accent_color']))
+                self.batch_size_var.set(str(config_data.get('batch_size', defaults['batch_size'])))
+                self.output_format_var.set(config_data.get('output_format', defaults['output_format']))
+                self.preview_var.set(config_data.get('preview', defaults['preview']))
+                self.auto_save_var.set(config_data.get('auto_save', defaults['auto_save']))
         self.gemini_temperature_var.set(float(config_data.get('gemini_temperature', defaults['gemini_temperature'])))
         self.gemini_top_p_var.set(float(config_data.get('gemini_top_p', defaults['gemini_top_p'])))
         self.gemini_top_k_var.set(int(config_data.get('gemini_top_k', defaults['gemini_top_k'])))
@@ -681,8 +681,9 @@ class AppGUI:
         # Format translated text
         translated_content = ""
         for i, segment in enumerate(self.translated_segments):
-            start_time = f"{int(segment['start'] // 60):02}:{int(segment['end'] // 60):02}"
-            end_time = f"{int(segment['start'] % 60):02}:{int(segment['end'] % 60):02}"
+            # Fixed time formatting to match the original segments
+            start_time = f"{int(segment['start'] // 60):02}:{int(segment['start'] % 60):02}"
+            end_time = f"{int(segment['end'] // 60):02}:{int(segment['end'] % 60):02}"
             text = segment['text']
             translated_content += f"#{i+1} [{start_time} → {end_time}]\n{text}\n\n"
             
@@ -841,9 +842,9 @@ class AppGUI:
                 
                 # Initial checks
                 api_key_val = self.gemini_api_key_var.get()
-                target_lang_val = self.target_language.get()
+            target_lang_val = self.target_language.get()
 
-                if not video_file or not os.path.exists(video_file):
+            if not video_file or not os.path.exists(video_file):
                     self.log_status(f"Error: Video file not found: {video_file}")
                     self.update_progress(f"Error: File not found {os.path.basename(video_file)}", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_FileNotFound'
@@ -860,28 +861,28 @@ class AppGUI:
                     self.update_progress(f"Error: API Key for {missing_key_provider} missing", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_Config'
                     break  # Stop queue processing for missing API key
-                
-                if not target_lang_val:
-                    messagebox.showerror("Error", "Please select a target language.")
+
+            if not target_lang_val:
+                messagebox.showerror("Error", "Please select a target language.")
                     self.log_status("Error: Target language not selected. Halting queue.")
-                    self.update_progress("Error: No target language", is_error=True)
+                self.update_progress("Error: No target language", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_Config'
                     break  # Stop queue processing
-                
+
                 # All initial checks passed, proceed with core processing
                 self._save_config()  # Save general app settings
-                
+
                 try:  # For batch_size conversion
-                    batch_size = int(self.batch_size_var.get())
-                    if batch_size <= 0:
-                        batch_size = get_default_config()['batch_size']
-                except (ValueError, TypeError):
+                batch_size = int(self.batch_size_var.get())
+                if batch_size <= 0:
                     batch_size = get_default_config()['batch_size']
+            except (ValueError, TypeError):
+                batch_size = get_default_config()['batch_size']
 
                 self.update_progress(f"Loading Whisper model for {os.path.basename(video_file)}...")
-                if not self._load_whisper_model_sync():
+            if not self._load_whisper_model_sync():
                     self.log_status(f"--- Process Failed (Whisper Model Load) for {os.path.basename(video_file)} ---")
-                    self.update_progress("Failed to load Whisper model", is_error=True)
+                self.update_progress("Failed to load Whisper model", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_WhisperModel'
                     continue  # Skip to next file
                 
@@ -952,9 +953,9 @@ class AppGUI:
                 
                 if video_idx == self.video_listbox.curselection()[0] if self.video_listbox.curselection() else False:
                     self.display_output(current_output_for_file)
-                    self.update_comparison_view()
-                
-                if self.auto_save_var.get() == "On":
+            self.update_comparison_view()
+            
+            if self.auto_save_var.get() == "On":
                     self.update_progress(f"Auto-saving output for {os.path.basename(video_file)}...")
                     base, _ = os.path.splitext(video_file)
                     auto_save_path = f"{base}.{output_format_val}"
