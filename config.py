@@ -6,6 +6,7 @@ import torch
 
 # --- Configuration File ---
 CONFIG_FILE = "config.json"
+HISTORY_FILE = "processed_history.json"
 
 # --- Constants ---
 WHISPER_MODELS = ["tiny", "base", "small", "medium", "large-v2", "large-v3"]
