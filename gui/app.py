@@ -249,14 +249,14 @@ class AppGUI:
         # --- Frame for Provider-Specific Settings (API Key, Model, etc.) ---
         self.provider_details_frame = ttk.Frame(translation_settings_sub_panel)
         self.provider_details_frame.pack(fill=tk.X, expand=True, padx=5, pady=(5,0))
-
+        
         # Initial call to populate based on default/loaded provider
         # This will be called again in _load_config after variables are set
 
         # --- Common Translation Settings (Language, Output Format) ---
         common_settings_frame = ttk.Frame(translation_settings_sub_panel)
         common_settings_frame.pack(fill=tk.X, padx=5, pady=3)
-
+        
         lang_frame = ttk.Frame(common_settings_frame)
         lang_frame.pack(fill=tk.X, pady=(0,3))
         ttk.Label(lang_frame, text="Target Language:").pack(side=tk.LEFT, padx=(0,5), anchor='w')
@@ -869,7 +869,7 @@ class AppGUI:
 
                 self.processed_file_data[video_file]['status'] = 'Processing_Whisper'
                 
-                                # Initial checks
+                                                # Initial checks
                 api_key_val = self.gemini_api_key_var.get()
                 target_lang_val = self.target_language.get()
 
@@ -971,7 +971,7 @@ class AppGUI:
                     self.update_progress(f"Translation failed for {os.path.basename(video_file)}", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_Translation'
                     continue
-                
+
                 # Translation successful, format output
                 output_format_val = self.output_format_var.get()
                 self.update_progress(f"Formatting output ({output_format_val}) for {os.path.basename(video_file)}...")
