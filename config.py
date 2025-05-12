@@ -62,7 +62,7 @@ PREVIEW_OPTIONS = ["On", "Off"]
 AUTO_SAVE_OPTIONS = ["On", "Off"]
 
 # --- App Info ---
-APP_VERSION = "2.1"
+APP_VERSION = "2.2.0"
 APP_TITLE = "Film Translator Generator"
 GITHUB_URL = "https://github.com/Fapzarz/FilmTranslatorGenerator"
 
