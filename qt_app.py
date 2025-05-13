@@ -17,9 +17,10 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel,
                                QListWidget, QFrame, QComboBox, QProgressBar,
                                QFileDialog, QMessageBox, QTabWidget, QTextEdit,
                                QSpinBox, QCheckBox, QRadioButton, QScrollArea,
-                               QSlider, QStatusBar, QMenu, QMenuBar, QTreeView)
+                               QSlider, QStatusBar, QMenu, QMenuBar, QTreeView,
+                               QStackedWidget)
 from PySide6.QtCore import Qt, QUrl, QSize, QTimer, Signal, Slot
-from PySide6.QtGui import QAction, QIcon, QPixmap, QFont, QColor
+from PySide6.QtGui import QAction, QIcon, QPixmap, QFont, QColor, QPalette
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtMultimediaWidgets import QVideoWidget
 
@@ -37,10 +38,17 @@ from backend.transcribe import transcribe_video, load_whisper_model
 from backend.translate import translate_text
 from backend.translate import validate_gemini_key, validate_openai_key, validate_anthropic_key
 from utils.format import format_output
-from utils.media import extract_video_thumbnail, play_video_preview, get_video_info
+from utils.media import extract_video_thumbnail, play_video_preview, get_video_info, diagnose_video_playback
 
-# New Qt-friendly managers will replace the Tkinter-based versions
-# from gui import project_manager, queue_manager, video_processor, subtitle_styler, editor_manager, shortcut_manager
+# Import the Qt-compatible manager classes
+from managers.project_manager import ProjectManager
+from managers.queue_manager import QueueManager
+from managers.preview_manager import PreviewManager
+from managers.editor_manager import EditorManager
+from managers.video_processor import VideoProcessor
+from managers.subtitle_styler import SubtitleStyler
+from managers.shortcut_manager import ShortcutManager
+# Additional managers will be implemented as needed
 
 
 class QtAppGUI(QMainWindow):
@@ -64,58 +72,61 @@ class QtAppGUI(QMainWindow):
         self.translated_segments = None
         self.current_output = None
         
-        # Initialize GUI variables - will use Qt mechanisms instead of StringVar
-        self.target_language = LANGUAGES[0] if LANGUAGES else "English"
-        self.whisper_model_name = WHISPER_MODELS[0] if WHISPER_MODELS else "base"
-        self.device = DEVICES[0] if DEVICES else "cpu"
-        self.compute_type = COMPUTE_TYPES.get(self.device, ["float32"])[0] if COMPUTE_TYPES else "float32"
-        self.theme = "dark"  # Qt themes work differently
-        self.accent_color = "blue"
+        # Initialize default values for configuration
+        self.target_language = "Indonesian"
+        self.whisper_model_name = "small"
+        self.device = "cpu"
+        self.compute_type = "float32" 
+        self.theme = "light"
+        self.accent_color = "#4b6eaf"
         self.batch_size = 16
         self.output_format = "srt"
         self.preview_enabled = True
-        self.auto_save_enabled = False
+        self.auto_save_enabled = True
         
-        # API Settings
-        self.translation_provider = TRANSLATION_PROVIDERS[0] if TRANSLATION_PROVIDERS else "Gemini"
+        # Initialize default values for translation providers
+        self.translation_provider = "gemini"
         self.gemini_api_key = ""
         self.openai_api_key = ""
         self.anthropic_api_key = ""
         self.deepseek_api_key = ""
-        self.gemini_model = GEMINI_MODELS[0] if GEMINI_MODELS else ""
-        self.openai_model = OPENAI_MODELS[0] if OPENAI_MODELS else ""
-        self.anthropic_model = ANTHROPIC_MODELS[0] if ANTHROPIC_MODELS else ""
-        
-        # Gemini parameters
-        self.gemini_temperature = 0.0
-        self.gemini_top_p = 1.0
+        self.gemini_model = "gemini-pro"
+        self.openai_model = "gpt-4"
+        self.anthropic_model = "claude-3-opus"
+        self.gemini_temperature = 0.7
+        self.gemini_top_p = 0.9
         self.gemini_top_k = 40
         
-        # Subtitle style settings
-        self.subtitle_font = SUBTITLE_FONTS[0] if SUBTITLE_FONTS else "Arial"
-        self.subtitle_color = SUBTITLE_COLORS[0] if SUBTITLE_COLORS else "white"
-        self.subtitle_size = SUBTITLE_SIZES[2] if SUBTITLE_SIZES else "medium"
-        self.subtitle_position = SUBTITLE_POSITIONS[0] if SUBTITLE_POSITIONS else "bottom"
-        self.subtitle_outline_color = SUBTITLE_OUTLINE_COLORS[0] if SUBTITLE_OUTLINE_COLORS else "black"
-        self.subtitle_outline_width = SUBTITLE_OUTLINE_WIDTHS[1] if SUBTITLE_OUTLINE_WIDTHS else "1"
-        self.subtitle_bg_color = SUBTITLE_BG_COLORS[0] if SUBTITLE_BG_COLORS else "black"
-        self.subtitle_bg_opacity = SUBTITLE_BG_OPACITY[0] if SUBTITLE_BG_OPACITY else "0"
+        # Initialize default values for subtitle styling
+        self.subtitle_font = "Arial"
+        self.subtitle_color = "White"
+        self.subtitle_size = "Medium"
+        self.subtitle_position = "Bottom"
+        self.subtitle_outline_color = "Black"
+        self.subtitle_outline_width = "1"
+        self.subtitle_bg_color = "Black"
+        self.subtitle_bg_opacity = "50"
         
-        # Media player components 
+        # Media player components (keep for advanced editor but don't display in main UI)
         self.media_player = QMediaPlayer()
         self.audio_output = QAudioOutput()
+        self.audio_output.setVolume(0.7)
         self.media_player.setAudioOutput(self.audio_output)
+        
+        # Connect media signals (keeping minimal error handling)
+        self.media_player.errorOccurred.connect(self.handle_media_error)
         
         # Setup UI components
         self.setup_ui()
         
-        # Initialize managers - will be implemented later
-        # self.project_manager = ProjectManager(self)
-        # self.queue_manager = QueueManager(self)
-        # self.video_processor = VideoProcessor(self)
-        # self.subtitle_styler = SubtitleStyler(self)
-        # self.editor_manager = EditorManager(self)
-        # self.shortcut_manager = ShortcutManager(self)
+        # Initialize managers
+        self.project_manager = ProjectManager(self)
+        self.queue_manager = QueueManager(self)
+        self.preview_manager = PreviewManager(self)
+        self.editor_manager = EditorManager(self)
+        self.video_processor = VideoProcessor(self)
+        self.subtitle_styler = SubtitleStyler(self)
+        self.shortcut_manager = ShortcutManager(self)
         
         # Load configuration
         self._load_config()
@@ -151,6 +162,11 @@ class QtAppGUI(QMainWindow):
         
         self.video_listbox = QListWidget()
         self.video_listbox.currentItemChanged.connect(self.on_video_select_in_queue)
+        
+        # Setup context menu for video list
+        self.video_listbox.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.video_listbox.customContextMenuRequested.connect(self.show_video_context_menu)
+        
         queue_layout.addWidget(self.video_listbox)
         
         queue_buttons_layout = QHBoxLayout()
@@ -179,36 +195,50 @@ class QtAppGUI(QMainWindow):
         queue_layout.addLayout(stats_layout)
         left_layout.addWidget(queue_frame)
         
-        # Settings section
-        settings_frame = QFrame()
-        settings_frame.setFrameShape(QFrame.StyledPanel)
-        settings_frame.setFrameShadow(QFrame.Raised)
-        settings_layout = QVBoxLayout(settings_frame)
+        # Add Subtitle Styler to left panel
+        subtitle_styler_frame = QFrame()
+        subtitle_styler_frame.setFrameShape(QFrame.StyledPanel)
+        subtitle_styler_frame.setFrameShadow(QFrame.Raised)
+        subtitle_styler_layout = QVBoxLayout(subtitle_styler_frame)
         
-        settings_header = QLabel("Settings")
-        settings_header.setStyleSheet("font-weight: bold;")
-        settings_layout.addWidget(settings_header)
+        subtitle_styler_header = QLabel("Subtitle Styling")
+        subtitle_styler_header.setStyleSheet("font-weight: bold;")
+        subtitle_styler_layout.addWidget(subtitle_styler_header)
         
-        # Basic settings fields
-        settings_layout.addWidget(QLabel("Target Language:"))
-        self.language_combo = QComboBox()
-        self.language_combo.addItems(LANGUAGES)
-        self.language_combo.setCurrentText(self.target_language)
-        settings_layout.addWidget(self.language_combo)
+        # Font selection
+        subtitle_styler_layout.addWidget(QLabel("Font:"))
+        self.subtitle_font_combo = QComboBox()
+        self.subtitle_font_combo.addItems(SUBTITLE_FONTS)
+        self.subtitle_font_combo.setCurrentText(self.subtitle_font)
+        subtitle_styler_layout.addWidget(self.subtitle_font_combo)
         
-        settings_layout.addWidget(QLabel("Whisper Model:"))
-        self.whisper_model_combo = QComboBox()
-        self.whisper_model_combo.addItems(WHISPER_MODELS)
-        self.whisper_model_combo.setCurrentText(self.whisper_model_name)
-        settings_layout.addWidget(self.whisper_model_combo)
+        # Color selection
+        subtitle_styler_layout.addWidget(QLabel("Color:"))
+        self.subtitle_color_combo = QComboBox()
+        self.subtitle_color_combo.addItems(SUBTITLE_COLORS)
+        self.subtitle_color_combo.setCurrentText(self.subtitle_color)
+        subtitle_styler_layout.addWidget(self.subtitle_color_combo)
         
-        settings_layout.addWidget(QLabel("Output Format:"))
-        self.output_format_combo = QComboBox()
-        self.output_format_combo.addItems(OUTPUT_FORMATS)
-        self.output_format_combo.setCurrentText(self.output_format)
-        settings_layout.addWidget(self.output_format_combo)
+        # Size selection
+        subtitle_styler_layout.addWidget(QLabel("Size:"))
+        self.subtitle_size_combo = QComboBox()
+        self.subtitle_size_combo.addItems(SUBTITLE_SIZES)
+        self.subtitle_size_combo.setCurrentText(self.subtitle_size)
+        subtitle_styler_layout.addWidget(self.subtitle_size_combo)
         
-        left_layout.addWidget(settings_frame)
+        # Position selection
+        subtitle_styler_layout.addWidget(QLabel("Position:"))
+        self.subtitle_position_combo = QComboBox()
+        self.subtitle_position_combo.addItems(SUBTITLE_POSITIONS)
+        self.subtitle_position_combo.setCurrentText(self.subtitle_position)
+        subtitle_styler_layout.addWidget(self.subtitle_position_combo)
+        
+        # Apply style button
+        apply_style_button = QPushButton("Apply Style")
+        apply_style_button.clicked.connect(lambda: self.subtitle_styler.apply_subtitle_style())
+        subtitle_styler_layout.addWidget(apply_style_button)
+        
+        left_layout.addWidget(subtitle_styler_frame)
         
         # Process button
         self.process_button = QPushButton("Process Selected Video")
@@ -237,43 +267,92 @@ class QtAppGUI(QMainWindow):
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(10, 10, 10, 10)
         
+        # Settings frame (moved to right panel)
+        settings_frame = QFrame()
+        settings_frame.setFrameShape(QFrame.StyledPanel)
+        settings_frame.setFrameShadow(QFrame.Raised)
+        settings_layout = QVBoxLayout(settings_frame)
+        
+        settings_header = QLabel("Settings")
+        settings_header.setStyleSheet("font-weight: bold;")
+        settings_layout.addWidget(settings_header)
+        
+        # Basic settings fields
+        settings_layout.addWidget(QLabel("Target Language:"))
+        self.language_combo = QComboBox()
+        self.language_combo.addItems(LANGUAGES)
+        self.language_combo.setCurrentText(self.target_language)
+        settings_layout.addWidget(self.language_combo)
+        
+        settings_layout.addWidget(QLabel("Whisper Model:"))
+        self.whisper_model_combo = QComboBox()
+        self.whisper_model_combo.addItems(WHISPER_MODELS)
+        self.whisper_model_combo.setCurrentText(self.whisper_model_name)
+        settings_layout.addWidget(self.whisper_model_combo)
+        
+        settings_layout.addWidget(QLabel("Output Format:"))
+        self.output_format_combo = QComboBox()
+        self.output_format_combo.addItems(OUTPUT_FORMATS)
+        self.output_format_combo.setCurrentText(self.output_format)
+        settings_layout.addWidget(self.output_format_combo)
+        
+        right_layout.addWidget(settings_frame)
+        
         # Video preview section
         preview_frame = QFrame()
         preview_frame.setFrameShape(QFrame.StyledPanel)
         preview_frame.setFrameShadow(QFrame.Raised)
         preview_layout = QVBoxLayout(preview_frame)
         
-        preview_header = QLabel("Video Preview")
+        preview_header = QLabel("Video Information")
         preview_header.setStyleSheet("font-weight: bold;")
         preview_layout.addWidget(preview_header)
         
-        # Use QVideoWidget instead of thumbnail
-        self.video_widget = QVideoWidget()
-        self.media_player.setVideoOutput(self.video_widget)
-        preview_layout.addWidget(self.video_widget)
+        # Info container
+        info_container = QWidget()
+        info_layout = QVBoxLayout(info_container)
         
-        # Video controls
-        controls_layout = QHBoxLayout()
+        # File info dan action buttons
+        file_info_layout = QHBoxLayout()
+        self.file_name_label = QLabel("No video selected")
+        file_info_layout.addWidget(self.file_name_label)
+        file_info_layout.addStretch()
         
-        self.play_button = QPushButton("Play")
-        self.play_button.clicked.connect(self.toggle_video_playback)
-        controls_layout.addWidget(self.play_button)
+        open_editor_button = QPushButton("Open Advanced Editor")
+        open_editor_button.clicked.connect(self.open_advanced_subtitle_editor)
+        open_editor_button.setStyleSheet("background-color: #4CAF50; color: white; padding: 8px 16px;")
+        file_info_layout.addWidget(open_editor_button)
         
-        self.position_slider = QSlider(Qt.Horizontal)
-        self.position_slider.setRange(0, 0)
-        self.position_slider.sliderMoved.connect(self.set_video_position)
-        controls_layout.addWidget(self.position_slider)
+        info_layout.addLayout(file_info_layout)
         
-        preview_layout.addLayout(controls_layout)
-        
-        # Video info
-        info_layout = QHBoxLayout()
+        # Video info dalam layout horizontal
+        video_info_layout = QHBoxLayout()
         self.video_duration_label = QLabel("Duration: N/A")
         self.video_size_label = QLabel("Size: N/A")
-        info_layout.addWidget(self.video_duration_label)
-        info_layout.addWidget(self.video_size_label)
-        preview_layout.addLayout(info_layout)
+        video_info_layout.addWidget(self.video_duration_label)
+        video_info_layout.addWidget(self.video_size_label)
+        info_layout.addLayout(video_info_layout)
+
+        # Detailed video technical info
+        video_tech_info_layout_1 = QHBoxLayout()
+        self.video_codec_label = QLabel("Video Codec: N/A")
+        self.audio_codec_label = QLabel("Audio Codec: N/A")
+        video_tech_info_layout_1.addWidget(self.video_codec_label)
+        video_tech_info_layout_1.addWidget(self.audio_codec_label)
+        info_layout.addLayout(video_tech_info_layout_1)
+
+        video_tech_info_layout_2 = QHBoxLayout()
+        self.bitrate_label = QLabel("Bitrate: N/A")
+        self.dimensions_label = QLabel("Dimensions: N/A") # Added for completeness
+        video_tech_info_layout_2.addWidget(self.bitrate_label)
+        video_tech_info_layout_2.addWidget(self.dimensions_label)
+        info_layout.addLayout(video_tech_info_layout_2)
         
+        # Processing status
+        self.processing_status_label = QLabel("Status: Not processed")
+        info_layout.addWidget(self.processing_status_label)
+        
+        preview_layout.addWidget(info_container)
         right_layout.addWidget(preview_frame)
         
         # Output tabs
@@ -354,11 +433,6 @@ class QtAppGUI(QMainWindow):
         
         # Create menu bar
         self.create_menus()
-        
-        # Connect media player signals
-        self.media_player.positionChanged.connect(self.position_changed)
-        self.media_player.durationChanged.connect(self.duration_changed)
-        self.media_player.playbackStateChanged.connect(self.playback_state_changed)
     
     def create_menus(self):
         """Create application menus."""
@@ -396,8 +470,16 @@ class QtAppGUI(QMainWindow):
         # Settings menu
         settings_menu = self.menuBar().addMenu("Settings")
         
+        # Theme menu implementation
         theme_menu = settings_menu.addMenu("Theme")
-        # TODO: Implement Qt theming
+        
+        light_theme_action = QAction("Light", self)
+        light_theme_action.triggered.connect(lambda: self.apply_theme("light"))
+        theme_menu.addAction(light_theme_action)
+        
+        dark_theme_action = QAction("Dark", self)
+        dark_theme_action.triggered.connect(lambda: self.apply_theme("dark"))
+        theme_menu.addAction(dark_theme_action)
         
         advanced_settings_action = QAction("Advanced Settings", self)
         advanced_settings_action.triggered.connect(self.open_advanced_settings)
@@ -406,6 +488,15 @@ class QtAppGUI(QMainWindow):
         shortcuts_action = QAction("Keyboard Shortcuts...", self)
         shortcuts_action.triggered.connect(self.open_shortcut_settings)
         settings_menu.addAction(shortcuts_action)
+        
+        # Add Debug menu
+        debug_menu = self.menuBar().addMenu("Debug")
+        
+        diagnose_video_action = QAction("Diagnose Video Playback", self)
+        diagnose_video_action.triggered.connect(self.diagnose_playback_issue)
+        debug_menu.addAction(diagnose_video_action)
+        
+        # Removed play video action since video player is now only in Advanced Editor
         
         # Help menu
         help_menu = self.menuBar().addMenu("Help")
@@ -417,22 +508,137 @@ class QtAppGUI(QMainWindow):
         about_action = QAction("About", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
+        
+        # Tools menu
+        tools_menu = self.menuBar().addMenu("Tools")
+        
+        advanced_subtitle_editor_action = QAction("Advanced Subtitle Editor", self)
+        advanced_subtitle_editor_action.triggered.connect(self.open_advanced_subtitle_editor)
+        tools_menu.addAction(advanced_subtitle_editor_action)
     
-    # Core functionality methods - stubs to be implemented
+    # Core functionality methods - update to use manager implementations
     def _load_config(self):
         """Load configuration from JSON file or use defaults."""
         self.log_status("Loading configuration...")
-        # Will be implemented fully
+        try:
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                
+                # Apply saved configuration
+                self.target_language = config.get('target_language', self.target_language)
+                self.whisper_model_name = config.get('whisper_model', self.whisper_model_name)
+                self.device = config.get('device', self.device)
+                self.compute_type = config.get('compute_type', self.compute_type)
+                self.theme = config.get('theme', self.theme)
+                self.accent_color = config.get('accent_color', self.accent_color)
+                self.batch_size = config.get('batch_size', self.batch_size)
+                self.output_format = config.get('output_format', self.output_format)
+                self.preview_enabled = config.get('preview', self.preview_enabled)
+                self.auto_save_enabled = config.get('auto_save', self.auto_save_enabled)
+                
+                # Load translation provider settings
+                self.translation_provider = config.get('translation_provider', self.translation_provider)
+                self.gemini_api_key = config.get('gemini_api_key', self.gemini_api_key)
+                self.openai_api_key = config.get('openai_api_key', self.openai_api_key)
+                self.anthropic_api_key = config.get('anthropic_api_key', self.anthropic_api_key)
+                self.deepseek_api_key = config.get('deepseek_api_key', self.deepseek_api_key)
+                self.gemini_model = config.get('gemini_model', self.gemini_model)
+                self.openai_model = config.get('openai_model', self.openai_model)
+                self.anthropic_model = config.get('anthropic_model', self.anthropic_model)
+                
+                # Load Gemini model parameters
+                self.gemini_temperature = config.get('gemini_temperature', self.gemini_temperature)
+                self.gemini_top_p = config.get('gemini_top_p', self.gemini_top_p)
+                self.gemini_top_k = config.get('gemini_top_k', self.gemini_top_k)
+                
+                # Load subtitle style settings
+                self.subtitle_font = config.get('subtitle_font', self.subtitle_font)
+                self.subtitle_color = config.get('subtitle_color', self.subtitle_color)
+                self.subtitle_size = config.get('subtitle_size', self.subtitle_size)
+                self.subtitle_position = config.get('subtitle_position', self.subtitle_position)
+                self.subtitle_outline_color = config.get('subtitle_outline_color', self.subtitle_outline_color)
+                self.subtitle_outline_width = config.get('subtitle_outline_width', self.subtitle_outline_width)
+                self.subtitle_bg_color = config.get('subtitle_bg_color', self.subtitle_bg_color)
+                self.subtitle_bg_opacity = config.get('subtitle_bg_opacity', self.subtitle_bg_opacity)
+                
+                # Load processed file data
+                self.processed_file_data = config.get('processed_file_data', {})
+                
+                # Populate video_queue from processed_file_data keys
+                self.video_queue = list(self.processed_file_data.keys())
+
+                # Update UI with loaded settings
+                self.language_combo.setCurrentText(self.target_language)
+                self.whisper_model_combo.setCurrentText(self.whisper_model_name)
+                self.output_format_combo.setCurrentText(self.output_format)
+                
+                # Apply the saved theme
+                self.apply_theme(self.theme)
+                
+                # Load queue from config after other settings are applied
+                if hasattr(self, 'queue_manager'): # Ensure queue_manager is initialized
+                    self.queue_manager.load_queue_from_config()
+
+                self.log_status("Configuration loaded successfully.")
+            else:
+                self.log_status("No configuration file found. Using defaults.")
+        except Exception as e:
+            self.log_status(f"Error loading configuration: {e}", "ERROR")
     
     def _save_config(self):
         """Save current configuration to JSON file."""
         self.log_status("Saving configuration...")
-        # Will be implemented fully
+        try:
+            # Update variables from UI
+            self.target_language = self.language_combo.currentText()
+            self.whisper_model_name = self.whisper_model_combo.currentText()
+            self.output_format = self.output_format_combo.currentText()
+            
+            config = {
+                'target_language': self.target_language,
+                'whisper_model': self.whisper_model_name,
+                'device': self.device,
+                'compute_type': self.compute_type,
+                'theme': self.theme,
+                'accent_color': self.accent_color,
+                'batch_size': self.batch_size,
+                'output_format': self.output_format,
+                'preview': self.preview_enabled,
+                'auto_save': self.auto_save_enabled,
+                'translation_provider': self.translation_provider,
+                'gemini_api_key': self.gemini_api_key,
+                'openai_api_key': self.openai_api_key,
+                'anthropic_api_key': self.anthropic_api_key,
+                'deepseek_api_key': self.deepseek_api_key,
+                'gemini_model': self.gemini_model,
+                'openai_model': self.openai_model,
+                'anthropic_model': self.anthropic_model,
+                'gemini_temperature': self.gemini_temperature,
+                'gemini_top_p': self.gemini_top_p,
+                'gemini_top_k': self.gemini_top_k,
+                'subtitle_font': self.subtitle_font,
+                'subtitle_color': self.subtitle_color,
+                'subtitle_size': self.subtitle_size,
+                'subtitle_position': self.subtitle_position,
+                'subtitle_outline_color': self.subtitle_outline_color,
+                'subtitle_outline_width': self.subtitle_outline_width,
+                'subtitle_bg_color': self.subtitle_bg_color,
+                'subtitle_bg_opacity': self.subtitle_bg_opacity,
+                'processed_file_data': self.processed_file_data
+            }
+            
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=4)
+            
+            self.log_status("Configuration saved successfully.")
+        except Exception as e:
+            self.log_status(f"Error saving configuration: {e}", "ERROR")
     
     def log_status(self, message, level="INFO"):
         """Log a message to the status bar and log area."""
         timestamp = datetime.now().strftime("%H:%M:%S")
-        log_message = f"[{timestamp}] {message}"
+        log_message = f"[{timestamp}] [{level}] {message}"
         
         # Update status bar
         self.statusBar().showMessage(message)
@@ -441,74 +647,144 @@ class QtAppGUI(QMainWindow):
         if hasattr(self, 'log_text'):
             self.log_text.append(log_message)
     
-    # Placeholder methods - to be implemented
+    # Implement core functionality methods using manager classes
     def add_videos_to_queue(self):
-        file_paths, _ = QFileDialog.getOpenFileNames(
-            self, "Select Video Files", "",
-            "Video Files (*.mp4 *.avi *.mkv *.mov *.wmv);;All Files (*)"
-        )
-        if file_paths:
-            self.log_status(f"Added {len(file_paths)} videos to queue")
-            # Actual implementation will come later
+        """Add videos to the processing queue."""
+        self.queue_manager.add_videos_to_queue()
     
     def remove_from_queue(self):
-        pass
+        """Remove the selected video from the queue."""
+        self.queue_manager.remove_selected_video_from_queue()
+        
+        # Reset informasi video
+        self.file_name_label.setText("No video selected")
+        self.video_duration_label.setText("Duration: N/A")
+        self.video_size_label.setText("Size: N/A")
+        self.video_codec_label.setText("Video Codec: N/A")
+        self.audio_codec_label.setText("Audio Codec: N/A")
+        self.bitrate_label.setText("Bitrate: N/A")
+        self.dimensions_label.setText("Dimensions: N/A")
+        self.processing_status_label.setText("Status: Not processed")
     
     def on_video_select_in_queue(self):
-        pass
+        """Handle selection change in the video queue."""
+        current_item = self.video_listbox.currentItem() # Use currentItem to get the QListWidgetItem
+        
+        if current_item is not None:
+            current_row = self.video_listbox.row(current_item) # Get row index from item
+            if 0 <= current_row < len(self.video_queue):
+                video_path = self.video_queue[current_row]
+                
+                # Dapatkan informasi video
+                video_info = get_video_info(video_path)
+                
+                # Update labels
+                self.file_name_label.setText(f"Selected: {os.path.basename(video_path)}")
+                self.video_duration_label.setText(f"Duration: {video_info.get('duration', 'N/A')}")
+                self.video_size_label.setText(f"Size: {video_info.get('size', 'N/A')}")
+                self.video_codec_label.setText(f"Video Codec: {video_info.get('video_codec', 'N/A')}")
+                self.audio_codec_label.setText(f"Audio Codec: {video_info.get('audio_codec', 'N/A')}")
+                self.bitrate_label.setText(f"Bitrate: {video_info.get('bitrate', 'N/A')}")
+                self.dimensions_label.setText(f"Dimensions: {video_info.get('dimensions', 'N/A')}")
+
+                # Update processing status
+                file_data = self.processed_file_data.get(video_path, {})
+                status = file_data.get('status', 'Not processed')
+                self.processing_status_label.setText(f"Status: {status}")
+
+                # Call queue_manager's selection update AFTER updating local labels
+                self.queue_manager.on_video_select_in_queue()
+                return # Explicitly return after successful update
+
+        # If no valid item is selected or row is out of bounds, reset labels
+        self.file_name_label.setText("No video selected")
+        self.video_duration_label.setText("Duration: N/A")
+        self.video_size_label.setText("Size: N/A")
+        self.video_codec_label.setText("Video Codec: N/A")
+        self.audio_codec_label.setText("Audio Codec: N/A")
+        self.bitrate_label.setText("Bitrate: N/A")
+        self.dimensions_label.setText("Dimensions: N/A")
+        self.processing_status_label.setText("Status: Not processed")
+        # Also call queue_manager's update for deselection if necessary
+        self.queue_manager.on_video_select_in_queue() # Assuming this handles deselection appropriately
     
     def process_selected_video(self):
-        pass
-    
-    def toggle_video_playback(self):
-        if self.media_player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
-            self.media_player.pause()
-        else:
-            self.media_player.play()
-    
-    def position_changed(self, position):
-        self.position_slider.setValue(position)
-    
-    def duration_changed(self, duration):
-        self.position_slider.setRange(0, duration)
-    
-    def set_video_position(self, position):
-        self.media_player.setPosition(position)
-    
-    def playback_state_changed(self, state):
-        if state == QMediaPlayer.PlaybackState.PlayingState:
-            self.play_button.setText('Pause')
-        else:
-            self.play_button.setText('Play')
+        """Process the selected video."""
+        self.video_processor.start_processing()
     
     def copy_to_clipboard(self):
-        pass
+        """Copy the current output to the clipboard."""
+        text = self.output_text.toPlainText()
+        if text:
+            QApplication.clipboard().setText(text)
+            self.log_status("Copied output to clipboard.")
+        else:
+            self.log_status("No output to copy.", "WARNING")
     
     def save_output_file(self):
-        pass
+        """Save the current output to a file."""
+        content = self.output_text.toPlainText()
+        if not content:
+            QMessageBox.warning(self, "Warning", "No output content to save.")
+            return
+        
+        format_extension = self.output_format
+        
+        default_filename = "subtitle"
+        if self.video_listbox.currentRow() >= 0 and self.video_listbox.currentRow() < len(self.video_queue):
+            video_path = self.video_queue[self.video_listbox.currentRow()]
+            default_filename = os.path.splitext(os.path.basename(video_path))[0]
+        
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Subtitle File",
+            default_filename + "." + format_extension,
+            f"Subtitle Files (*.{format_extension});;All Files (*)"
+        )
+        
+        if filepath:
+            try:
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                self.log_status(f"Output saved to {filepath}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save file: {e}")
+                self.log_status(f"Error saving file: {e}", "ERROR")
     
     def save_editor_changes(self):
-        pass
+        """Save changes from the subtitle editor."""
+        self.editor_manager.save_editor_changes()
     
     def load_project(self):
-        pass
+        """Load a project file."""
+        self.project_manager.load_project()
     
     def save_project(self):
-        pass
+        """Save the current project."""
+        self.project_manager.save_project()
     
     def save_project_as(self):
-        pass
+        """Save the current project with a new filename."""
+        self.project_manager.save_project_as()
     
     def open_advanced_settings(self):
-        pass
+        """Open the advanced settings dialog."""
+        from dialogs.advanced_settings import AdvancedSettingsDialog
+        dialog = AdvancedSettingsDialog(self)
+        dialog.settings_updated.connect(lambda: self.log_status("Advanced settings applied."))
+        dialog.exec()
     
     def open_shortcut_settings(self):
-        pass
+        """Open the keyboard shortcuts dialog."""
+        self.shortcut_manager.open_shortcut_dialog()
     
     def open_documentation(self):
-        pass
+        """Open the documentation."""
+        # Will be implemented later
+        self.log_status("Documentation not yet implemented.")
     
     def show_about(self):
+        """Show the about dialog."""
         QMessageBox.about(
             self, 
             "About Film Translator Generator",
@@ -523,6 +799,521 @@ class QtAppGUI(QMainWindow):
         self._save_config()
         event.accept()
 
+    def handle_media_error(self, error, error_string):
+        """Handle media player errors."""
+        self.log_status(f"Media Player Error: {error_string}", "ERROR")
+        QMessageBox.critical(
+            self,
+            "Media Player Error",
+            f"An error occurred while playing the video:\n{error_string}\n\nMake sure you have the necessary codecs installed."
+        )
+
+    # media_status_changed method removed since we no longer need it
+
+    def diagnose_playback_issue(self):
+        """Run diagnostics on the currently selected video to identify playback issues."""
+        current_row = self.video_listbox.currentRow()
+        if current_row < 0 or current_row >= len(self.video_queue):
+            self.log_status("No video selected for diagnosis", "WARNING")
+            return
+        
+        video_path = self.video_queue[current_row]
+        self.log_status(f"Running diagnostics on: {video_path}")
+        
+        # Get detailed diagnostic information
+        diag_result = diagnose_video_playback(video_path)
+        
+        # Log diagnostics information
+        self.log_status("Diagnostic Results:")
+        for key, value in diag_result.items():
+            if key != 'issues':
+                self.log_status(f"  {key}: {value}")
+        
+        if diag_result['issues']:
+            self.log_status("Issues found:")
+            for issue in diag_result['issues']:
+                self.log_status(f"  - {issue}", "WARNING")
+
+    def show_video_context_menu(self, position):
+        """Show context menu for video list."""
+        current_row = self.video_listbox.currentRow()
+        
+        # Only show context menu if an item is selected
+        if current_row >= 0:
+            context_menu = QMenu()
+            
+            # Diagnose action
+            diagnose_action = QAction("Diagnose Video Playback", self)
+            diagnose_action.triggered.connect(self.diagnose_playback_issue)
+            context_menu.addAction(diagnose_action)
+            
+            # Advanced subtitle editor action
+            edit_action = QAction("Open Advanced Subtitle Editor", self)
+            edit_action.triggered.connect(self.open_advanced_subtitle_editor)
+            context_menu.addAction(edit_action)
+            
+            # Remove action
+            remove_action = QAction("Remove from Queue", self)
+            remove_action.triggered.connect(self.remove_from_queue)
+            context_menu.addAction(remove_action)
+            
+            # Show context menu at cursor position
+            context_menu.exec(self.video_listbox.mapToGlobal(position))
+
+    def apply_theme(self, theme_name):
+        """Apply the selected theme to the application."""
+        self.theme = theme_name
+        self.log_status(f"Applying {theme_name} theme")
+        
+        app = QApplication.instance()
+        
+        if theme_name == "dark":
+            # Sun Valley inspired dark theme
+            app.setStyle("Fusion")  # Use Fusion style as base
+            dark_palette = QPalette()
+            
+            # Warm dark colors
+            bg_color = QColor(32, 32, 32)
+            text_color = QColor(240, 240, 240)
+            accent_color = QColor(75, 110, 175)  # Soft blue accent
+            secondary_bg = QColor(45, 45, 45)
+            
+            # Set colors for dark theme
+            dark_palette.setColor(QPalette.Window, bg_color)
+            dark_palette.setColor(QPalette.WindowText, text_color)
+            dark_palette.setColor(QPalette.Base, secondary_bg)
+            dark_palette.setColor(QPalette.AlternateBase, bg_color)
+            dark_palette.setColor(QPalette.ToolTipBase, bg_color)
+            dark_palette.setColor(QPalette.ToolTipText, text_color)
+            dark_palette.setColor(QPalette.Text, text_color)
+            dark_palette.setColor(QPalette.Button, bg_color)
+            dark_palette.setColor(QPalette.ButtonText, text_color)
+            dark_palette.setColor(QPalette.Link, accent_color)
+            dark_palette.setColor(QPalette.Highlight, accent_color)
+            dark_palette.setColor(QPalette.HighlightedText, QColor(255, 255, 255))
+            
+            # Apply the palette
+            app.setPalette(dark_palette)
+            
+            # Custom style sheet for additional elements
+            stylesheet = """
+            QMainWindow, QDialog {
+                background-color: #202020;
+                border-radius: 8px;
+            }
+            QFrame {
+                border-radius: 8px;
+            }
+            QTabWidget::pane {
+                border: 1px solid #3a3a3a;
+                background-color: #2d2d2d;
+                border-radius: 8px;
+            }
+            QTabBar::tab {
+                background-color: #313131;
+                color: #e0e0e0;
+                padding: 8px 12px;
+                border: none;
+                margin-right: 2px;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+            }
+            QTabBar::tab:selected {
+                background-color: #4b6eaf;
+                color: white;
+            }
+            QPushButton {
+                background-color: #404040;
+                color: #f0f0f0;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #4b6eaf;
+            }
+            QPushButton:pressed {
+                background-color: #3c5a91;
+            }
+            QComboBox {
+                background-color: #404040;
+                color: #f0f0f0;
+                border: 1px solid #505050;
+                border-radius: 6px;
+                padding: 6px 12px;
+                min-height: 24px;
+            }
+            QComboBox::drop-down {
+                border: none;
+                border-left: 1px solid #505050;
+                width: 20px;
+            }
+            QLineEdit, QTextEdit {
+                background-color: #2d2d2d;
+                color: #f0f0f0;
+                border: 1px solid #505050;
+                border-radius: 6px;
+                padding: 6px;
+            }
+            QListWidget {
+                background-color: #2d2d2d;
+                color: #f0f0f0;
+                border: 1px solid #505050;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            QListWidget::item {
+                padding: 6px;
+                border-radius: 4px;
+            }
+            QListWidget::item:selected {
+                background-color: #4b6eaf;
+            }
+            QListWidget::item:hover {
+                background-color: #3c5a91;
+            }
+            QMenuBar {
+                background-color: #202020;
+                color: #f0f0f0;
+                border-bottom: 1px solid #3a3a3a;
+            }
+            QMenuBar::item {
+                background-color: transparent;
+                padding: 6px 12px;
+                border-radius: 4px;
+            }
+            QMenuBar::item:selected {
+                background-color: #4b6eaf;
+            }
+            QMenu {
+                background-color: #2d2d2d;
+                color: #f0f0f0;
+                border: 1px solid #505050;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 6px 28px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #4b6eaf;
+            }
+            QMessageBox {
+                background-color: #2d2d2d;
+                color: #f0f0f0;
+                border-radius: 8px;
+            }
+            QLabel {
+                color: #f0f0f0;
+            }
+            QProgressBar {
+                border: 1px solid #505050;
+                border-radius: 6px;
+                background-color: #2d2d2d;
+                text-align: center;
+                color: white;
+                min-height: 16px;
+            }
+            QProgressBar::chunk {
+                background-color: #4b6eaf;
+                border-radius: 5px;
+            }
+            QSlider::groove:horizontal {
+                border: 1px solid #505050;
+                height: 8px;
+                background: #2d2d2d;
+                margin: 2px 0;
+                border-radius: 4px;
+            }
+            QSlider::handle:horizontal {
+                background: #4b6eaf;
+                border: none;
+                width: 18px;
+                height: 18px;
+                margin: -5px 0;
+                border-radius: 9px;
+            }
+            QScrollBar:vertical {
+                border: none;
+                background: #2d2d2d;
+                width: 12px;
+                border-radius: 6px;
+                margin: 12px 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #505050;
+                min-height: 20px;
+                border-radius: 6px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                border: none;
+                background: none;
+                height: 10px;
+            }
+            QSpinBox {
+                background-color: #2d2d2d;
+                color: #f0f0f0;
+                border: 1px solid #505050;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            """
+            app.setStyleSheet(stylesheet)
+        else:
+            # Sun Valley inspired light theme
+            app.setStyle("Fusion")  # Use Fusion style as base
+            light_palette = QPalette()
+            
+            # Clean light colors
+            bg_color = QColor(245, 245, 250)
+            text_color = QColor(30, 30, 30)
+            accent_color = QColor(75, 110, 175)  # Same blue accent as dark theme
+            secondary_bg = QColor(255, 255, 255)
+            
+            # Set colors for light theme
+            light_palette.setColor(QPalette.Window, bg_color)
+            light_palette.setColor(QPalette.WindowText, text_color)
+            light_palette.setColor(QPalette.Base, secondary_bg)
+            light_palette.setColor(QPalette.AlternateBase, bg_color)
+            light_palette.setColor(QPalette.ToolTipBase, secondary_bg)
+            light_palette.setColor(QPalette.ToolTipText, text_color)
+            light_palette.setColor(QPalette.Text, text_color)
+            light_palette.setColor(QPalette.Button, bg_color)
+            light_palette.setColor(QPalette.ButtonText, text_color)
+            light_palette.setColor(QPalette.Link, accent_color)
+            light_palette.setColor(QPalette.Highlight, accent_color)
+            light_palette.setColor(QPalette.HighlightedText, QColor(255, 255, 255))
+            
+            # Apply the palette
+            app.setPalette(light_palette)
+            
+            # Custom style sheet for additional elements
+            stylesheet = """
+            QMainWindow, QDialog {
+                background-color: #f5f5fa;
+                border-radius: 8px;
+            }
+            QFrame {
+                border-radius: 8px;
+            }
+            QTabWidget::pane {
+                border: 1px solid #e0e0e0;
+                background-color: #ffffff;
+                border-radius: 8px;
+            }
+            QTabBar::tab {
+                background-color: #efefef;
+                color: #202020;
+                padding: 8px 12px;
+                border: none;
+                margin-right: 2px;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+            }
+            QTabBar::tab:selected {
+                background-color: #4b6eaf;
+                color: white;
+            }
+            QPushButton {
+                background-color: #e8e8e8;
+                color: #202020;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #4b6eaf;
+                color: white;
+            }
+            QPushButton:pressed {
+                background-color: #3c5a91;
+                color: white;
+            }
+            QComboBox {
+                background-color: #ffffff;
+                color: #202020;
+                border: 1px solid #d0d0d0;
+                border-radius: 6px;
+                padding: 6px 12px;
+                min-height: 24px;
+            }
+            QComboBox::drop-down {
+                border: none;
+                border-left: 1px solid #d0d0d0;
+                width: 20px;
+            }
+            QLineEdit, QTextEdit {
+                background-color: #ffffff;
+                color: #202020;
+                border: 1px solid #d0d0d0;
+                border-radius: 6px;
+                padding: 6px;
+            }
+            QListWidget {
+                background-color: #ffffff;
+                color: #202020;
+                border: 1px solid #d0d0d0;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            QListWidget::item {
+                padding: 6px;
+                border-radius: 4px;
+            }
+            QListWidget::item:selected {
+                background-color: #4b6eaf;
+                color: white;
+            }
+            QListWidget::item:hover {
+                background-color: #e8e8e8;
+            }
+            QMenuBar {
+                background-color: #f5f5fa;
+                color: #202020;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            QMenuBar::item {
+                background-color: transparent;
+                padding: 6px 12px;
+                border-radius: 4px;
+            }
+            QMenuBar::item:selected {
+                background-color: #4b6eaf;
+                color: white;
+            }
+            QMenu {
+                background-color: #ffffff;
+                color: #202020;
+                border: 1px solid #d0d0d0;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 6px 28px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #4b6eaf;
+                color: white;
+            }
+            QMessageBox {
+                background-color: #ffffff;
+                color: #202020;
+                border-radius: 8px;
+            }
+            QLabel {
+                color: #202020;
+            }
+            QProgressBar {
+                border: 1px solid #d0d0d0;
+                border-radius: 6px;
+                background-color: #ffffff;
+                text-align: center;
+                color: #202020;
+                min-height: 16px;
+            }
+            QProgressBar::chunk {
+                background-color: #4b6eaf;
+                border-radius: 5px;
+            }
+            QSlider::groove:horizontal {
+                border: 1px solid #d0d0d0;
+                height: 8px;
+                background: #ffffff;
+                margin: 2px 0;
+                border-radius: 4px;
+            }
+            QSlider::handle:horizontal {
+                background: #4b6eaf;
+                border: none;
+                width: 18px;
+                height: 18px;
+                margin: -5px 0;
+                border-radius: 9px;
+            }
+            QScrollBar:vertical {
+                border: none;
+                background: #f0f0f0;
+                width: 12px;
+                border-radius: 6px;
+                margin: 12px 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: #d0d0d0;
+                min-height: 20px;
+                border-radius: 6px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                border: none;
+                background: none;
+                height: 10px;
+            }
+            QSpinBox {
+                background-color: #ffffff;
+                color: #202020;
+                border: 1px solid #d0d0d0;
+                border-radius: 6px;
+                padding: 4px;
+            }
+            """
+            app.setStyleSheet(stylesheet)
+        
+        # Save the theme setting
+        self._save_config()
+
+    def open_advanced_subtitle_editor(self):
+        """Open the advanced subtitle editor dialog."""
+        current_row = self.video_listbox.currentRow()
+        if current_row < 0 or current_row >= len(self.video_queue):
+            QMessageBox.warning(self, "Warning", "Please select a video first.")
+            return
+        
+        video_path = self.video_queue[current_row]
+        segments = None
+        
+        # Get current segments if available
+        file_data = self.processed_file_data.get(video_path)
+        if file_data:
+            if file_data.get('translated_segments'):
+                segments = file_data.get('translated_segments')
+            elif file_data.get('transcribed_segments'):
+                segments = file_data.get('transcribed_segments')
+        
+        try:
+            # Import here to avoid circular imports
+            from dialogs.advanced_subtitle_editor import AdvancedSubtitleEditor
+            dialog = AdvancedSubtitleEditor(self, segments=segments, video_path=video_path)
+            
+            # Connect the signal for updated segments
+            dialog.subtitle_updated.connect(lambda updated_segments: self.update_segments_from_editor(video_path, updated_segments))
+            
+            # Show dialog
+            dialog.exec()
+        except ImportError as e:
+            QMessageBox.critical(self, "Error", f"Failed to load Advanced Subtitle Editor: {e}")
+            self.log_status(f"Error loading Advanced Subtitle Editor: {e}", "ERROR")
+    
+    def update_segments_from_editor(self, video_path, updated_segments):
+        """Update segments data from Advanced Subtitle Editor."""
+        if video_path not in self.processed_file_data:
+            self.processed_file_data[video_path] = {'status': 'Pending'}
+        
+        file_data = self.processed_file_data[video_path]
+        
+        # Update translated segments with edited segments
+        file_data['translated_segments'] = updated_segments
+        
+        # If the file hasn't been previously processed, mark it as done
+        if file_data.get('status') == 'Pending':
+            file_data['status'] = 'Done'
+        
+        # Update UI
+        self.queue_manager.on_video_select_in_queue()
+        self.log_status(f"Updated subtitle segments for {os.path.basename(video_path)}")
+        
+        # Save configuration with updated data
+        self._save_config()
 
 def main():
     app = QApplication(sys.argv)
