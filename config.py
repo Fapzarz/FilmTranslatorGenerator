@@ -62,9 +62,32 @@ PREVIEW_OPTIONS = ["On", "Off"]
 AUTO_SAVE_OPTIONS = ["On", "Off"]
 
 # --- App Info ---
-APP_VERSION = "2.5.0"
-APP_TITLE = "Film Translator Generator"
+APP_NAME = "Film Translator Generator"
+APP_TITLE = f"{APP_NAME} 2.5.10"
+APP_VERSION = "2.5.10"
 GITHUB_URL = "https://github.com/Fapzarz/FilmTranslatorGenerator"
+
+# --- Default Keyboard Shortcuts ---
+# Format: "ActionName": "ShortcutString"
+# ShortcutString format: e.g., "Control-o", "Alt-F4", "Shift-Return"
+# Gunakan nama key seperti yang dikenal Tkinter: 
+# https://www.tcl.tk/man/tcl8.6/TkCmd/keysyms.htm (tanpa prefix XK_)
+# Modifier: Control, Mod1 (Alt), Shift, Mod2, Mod3, Mod4, Mod5, Lock, Extended
+DEFAULT_SHORTCUTS = {
+    "add_videos_to_queue": "Control-o",         # O untuk Open/Add
+    "remove_selected_video": "Delete",
+    "clear_video_queue": "Control-Shift-Delete",
+    "start_processing": "Control-p",          # P untuk Process
+    "save_project": "Control-s",              # S untuk Save
+    "save_project_as": "Control-Shift-S",
+    "load_project": "Control-l",              # L untuk Load
+    "save_subtitles": "Control-Alt-S",
+    "copy_output_to_clipboard": "Control-c",
+    "apply_editor_changes": "Control-Return", # Atau Control-E (Execute/Enter)
+    "open_advanced_settings": "Control-comma", # Koma sering digunakan untuk settings
+    "show_about_dialog": "F1", 
+    "exit_application": "Alt-F4" # Hati-hati dengan ini, mungkin lebih baik tidak ada default atau yang tidak mudah terpicu
+}
 
 # --- Gemini API specific settings ---
 DEFAULT_GEMINI_TEMPERATURE = 0.2
@@ -112,8 +135,7 @@ def get_default_config():
         'deepseek_api_key': DEFAULT_DEEPSEEK_API_KEY,
         'openai_model': DEFAULT_OPENAI_MODEL,
         'anthropic_model': DEFAULT_ANTHROPIC_MODEL,
-        # DeepSeek model is fixed for now, so no 'deepseek_model' entry here for user selection
-        'gemini_model': DEFAULT_GEMINI_MODEL, # Added Gemini model selection
+        'gemini_model': DEFAULT_GEMINI_MODEL, 
         'target_language': 'English',
         'whisper_model': 'large-v2',
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
@@ -128,7 +150,6 @@ def get_default_config():
         'gemini_top_p': DEFAULT_GEMINI_TOP_P,
         'gemini_top_k': DEFAULT_GEMINI_TOP_K,
         'extensive_logging': DEFAULT_EXTENSIVE_LOGGING,
-        # Add default subtitle styles
         'subtitle_font': DEFAULT_SUBTITLE_FONT,
         'subtitle_color': DEFAULT_SUBTITLE_COLOR,
         'subtitle_size': DEFAULT_SUBTITLE_SIZE,
@@ -136,5 +157,6 @@ def get_default_config():
         'subtitle_outline_color': DEFAULT_SUBTITLE_OUTLINE_COLOR,
         'subtitle_outline_width': DEFAULT_SUBTITLE_OUTLINE_WIDTH,
         'subtitle_bg_color': DEFAULT_SUBTITLE_BG_COLOR,
-        'subtitle_bg_opacity': DEFAULT_SUBTITLE_BG_OPACITY
+        'subtitle_bg_opacity': DEFAULT_SUBTITLE_BG_OPACITY,
+        'shortcuts': DEFAULT_SHORTCUTS.copy()  # Tambahkan shortcut ke default config
     } 

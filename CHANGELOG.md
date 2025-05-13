@@ -10,7 +10,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [2.5.0] - 2025-05-15
+## [2.5.10] - 2025-05-20
+
+### Changed
+- **Refactored `PreviewManager`**: Moved video preview and preview-with-subtitles logic from `gui/app.py` to the new `gui/preview_manager.py` module for better modularity.
+- **Code Cleanup in `gui/app.py`**: Removed residual code (commented-out methods and old logic blocks) related to functionalities previously moved to `ShortcutManager` and `PreviewManager`, resulting in a leaner `AppGUI` class.
+- **Notebook Button Configuration**: Ensured that buttons within the notebook tabs (Copy, Save As, Preview with Subtitles, Apply Editor Changes) in `gui/app.py` are correctly configured to call their respective methods, including those from the new `PreviewManager` and existing `EditorManager`.
+
+### Improved
+- Improved code organization and maintainability by further decoupling functionalities from `gui/app.py`.
+
+## [2.5.5] - 2025-05-17
+
+### Changed
+- **Major Code Refactoring**: Significantly refactored the `gui/app.py` module by splitting its functionalities into several dedicated manager and styler modules:
+  - `gui/main_layout.py`: Handles the creation of left and right UI panes.
+  - `gui/project_manager.py`: Manages project saving and loading logic.
+  - `gui/queue_manager.py`: Controls video queue management logic.
+  - `gui/video_processor.py`: Contains video processing logic and Whisper model loading.
+  - `gui/subtitle_styler.py`: Manages subtitle styling, style preview, and application to SRT files.
+  - `gui/editor_manager.py`: Handles logic for loading, parsing, and applying changes from the subtitle editor.
+- This refactoring improves code organization, maintainability, and scalability.
+
+### Fixed
+- Corrected video path retrieval in the `preview_video` function in `gui/app.py`.
+- Removed an unused `re` import from `gui/app.py`.
+- Removed a redundant `_update_queue_statistics` method from `gui/app.py` as its functionality is handled by `gui/queue_manager.py`.
+
+### Improved
+- Subtitle editor now automatically refreshes its content after applying changes, showing the parsed and cleaned segments.
+- Configuration saving is no longer triggered on every subtitle style change for a specific video; style data is saved with project or main configuration saves.
+
+## [2.2.5] - 2025-05-13
 
 ### Added
 - **Multiple Gemini Models Support**: Added ability to choose between Gemini models:
@@ -144,7 +175,38 @@ Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [2.5.0] - 2025-05-15
+## [2.5.10] - 2025-05-20
+
+### Changed
+- **Refaktorisasi `PreviewManager`**: Memindahkan logika pratinjau video dan pratinjau video dengan subtitle dari `gui/app.py` ke modul baru `gui/preview_manager.py` untuk modularitas yang lebih baik.
+- **Pembersihan Kode di `gui/app.py`**: Menghapus sisa kode (metode yang dikomentari dan blok logika lama) yang terkait dengan fungsionalitas yang sebelumnya dipindahkan ke `ShortcutManager` dan `PreviewManager`, menghasilkan kelas `AppGUI` yang lebih ramping.
+- **Konfigurasi Tombol Notebook**: Memastikan bahwa tombol-tombol di dalam tab notebook (Salin, Simpan Sebagai, Pratinjau dengan Subtitle, Terapkan Perubahan Editor) di `gui/app.py` dikonfigurasi dengan benar untuk memanggil metode masing-masing, termasuk metode dari `PreviewManager` yang baru dan `EditorManager` yang sudah ada.
+
+### Improved
+- Peningkatan organisasi dan keterbacaan kode dengan lebih lanjut memisahkan fungsionalitas dari `gui/app.py`.
+
+## [2.5.5] - 2025-05-17
+
+### Changed
+- **Major Code Refactoring**: Melakukan refaktorisasi signifikan pada modul `gui/app.py` dengan memecah fungsionalitasnya ke beberapa modul manager dan styler khusus:
+  - `gui/main_layout.py`: Menangani pembuatan panel UI kiri dan kanan.
+  - `gui/project_manager.py`: Mengelola logika penyimpanan dan pemuatan proyek.
+  - `gui/queue_manager.py`: Mengontrol logika manajemen antrean video.
+  - `gui/video_processor.py`: Berisi logika pemrosesan video dan pemuatan model Whisper.
+  - `gui/subtitle_styler.py`: Mengelola logika styling subtitle, pratinjau gaya, dan penerapan ke file SRT.
+  - `gui/editor_manager.py`: Menangani logika untuk memuat, mem-parsing, dan menerapkan perubahan dari editor subtitle.
+- Refaktorisasi ini meningkatkan organisasi kode, kemudahan pemeliharaan, dan skalabilitas.
+
+### Fixed
+- Memperbaiki pengambilan path video pada fungsi `preview_video` di `gui/app.py`.
+- Menghapus impor `re` yang tidak digunakan dari `gui/app.py`.
+- Menghapus metode `_update_queue_statistics` yang redundan dari `gui/app.py` karena fungsionalitasnya ditangani oleh `gui/queue_manager.py`.
+
+### Improved
+- Editor subtitle sekarang secara otomatis menyegarkan kontennya setelah menerapkan perubahan, menampilkan segmen yang telah di-parse dan dibersihkan.
+- Penyimpanan konfigurasi tidak lagi dipicu pada setiap perubahan gaya subtitle untuk video tertentu; data gaya disimpan bersama dengan penyimpanan proyek atau konfigurasi utama.
+
+## [2.2.5] - 2025-05-13
 
 ### Added
 - **Dukungan Berbagai Model Gemini**: Menambahkan kemampuan untuk memilih antara model Gemini:

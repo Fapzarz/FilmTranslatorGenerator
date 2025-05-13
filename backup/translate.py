@@ -9,87 +9,12 @@ from config import (
     DEFAULT_BATCH_SIZE, 
     OPENAI_MODELS, 
     ANTHROPIC_MODELS, # Added ANTHROPIC_MODELS
-    DEEPSEEK_MODEL # Added DEEPSEEK_MODEL
+    DEEPSEEK_MODEL, # Added DEEPSEEK_MODEL
+    GEMINI_MODELS # Added GEMINI_MODELS
 )
 
 # Placeholder for API key storage/retrieval if not passed directly
 # For now, API keys are expected to be passed in provider_config
-
-# --- API Key Validation Functions ---
-
-def validate_gemini_key(api_key, status_callback):
-    """Validates the Gemini API key by trying to list models."""
-    if not api_key:
-        return False, "API Key is empty."
-    try:
-        genai.configure(api_key=api_key)
-        models = [m.name for m in genai.list_models()]
-        if not models: # Should ideally return some models
-            return False, "Key configured, but no models found (check permissions/key)."
-        status_callback("Gemini API Key appears valid (models listed).", "VERBOSE")
-        return True, "Valid"
-    except Exception as e:
-        error_message = f"Gemini Key Validation Error: {str(e)}"
-        status_callback(error_message, "ERROR")
-        # More specific error checking can be added here if needed
-        if "API_KEY_INVALID" in str(e) or "PERMISSION_DENIED" in str(e) or "authentication" in str(e).lower():
-            return False, "Invalid API Key."
-        return False, f"Validation Error: {str(e)[:100]}" # Truncate long errors
-
-def validate_openai_key(api_key, status_callback):
-    """Validates the OpenAI API key by trying to list models."""
-    if not api_key:
-        return False, "API Key is empty."
-    try:
-        client = openai.OpenAI(api_key=api_key)
-        client.models.list() # This call will fail if the key is invalid
-        status_callback("OpenAI API Key appears valid (models listed).", "VERBOSE")
-        return True, "Valid"
-    except openai.AuthenticationError:
-        status_callback("OpenAI AuthenticationError: Invalid API Key.", "ERROR")
-        return False, "Invalid API Key."
-    except openai.APIConnectionError as e:
-        status_callback(f"OpenAI APIConnectionError: {e}", "ERROR")
-        return False, "Connection Error."
-    except openai.RateLimitError as e:
-        status_callback(f"OpenAI RateLimitError: {e}", "ERROR")
-        return False, "Rate Limit Exceeded." # Key might be valid but hitting limits
-    except openai.APIError as e: # Catch other OpenAI API errors
-        status_callback(f"OpenAI APIError: {e}", "ERROR")
-        return False, f"API Error: {str(e)[:100]}"
-    except Exception as e: # Catch any other unexpected errors
-        error_message = f"OpenAI Key Validation Error: {str(e)}"
-        status_callback(error_message, "ERROR")
-        return False, f"Validation Error: {str(e)[:100]}"
-
-def validate_anthropic_key(api_key, status_callback):
-    """Validates the Anthropic API key by a lightweight operation (e.g., count_tokens)."""
-    if not api_key:
-        return False, "API Key is empty."
-    try:
-        client = anthropic.Anthropic(api_key=api_key)
-        # Using count_tokens as a very lightweight call to check client initialization and basic auth
-        client.count_tokens("test") 
-        status_callback("Anthropic API Key appears valid (client initialized).", "VERBOSE")
-        return True, "Valid"
-    except anthropic.AuthenticationError:
-        status_callback("Anthropic AuthenticationError: Invalid API Key.", "ERROR")
-        return False, "Invalid API Key."
-    except anthropic.APIConnectionError as e:
-        status_callback(f"Anthropic APIConnectionError: {e}", "ERROR")
-        return False, "Connection Error."
-    except anthropic.RateLimitError as e:
-        status_callback(f"Anthropic RateLimitError: {e}", "ERROR")
-        return False, "Rate Limit Exceeded."
-    except anthropic.APIError as e: # Catch other Anthropic API errors
-        status_callback(f"Anthropic APIError: {e}", "ERROR")
-        return False, f"API Error: {str(e)[:100]}"
-    except Exception as e: # Catch any other unexpected errors
-        error_message = f"Anthropic Key Validation Error: {str(e)}"
-        status_callback(error_message, "ERROR")
-        return False, f"Validation Error: {str(e)[:100]}"
-
-# --- End API Key Validation Functions ---
 
 def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, target_language, status_callback, batch_size, gemini_temperature, gemini_top_p, gemini_top_k):
     """Translates text segments using Gemini API."""
@@ -98,14 +23,14 @@ def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, tar
         return None
     try:
         genai.configure(api_key=gemini_api_key)
-        # Consider making model name configurable if more Gemini models are supported
+        # Use the model name selected by the user
         model = genai.GenerativeModel(gemini_model_name)
         generation_config = genai.types.GenerationConfig(
             temperature=gemini_temperature,
             top_p=gemini_top_p,
             top_k=gemini_top_k
         )
-        status_callback(f"Configured Gemini. Translating to {target_language}...", level="INFO")
+        status_callback(f"Configured Gemini with model: {gemini_model_name}. Translating to {target_language}...", level="INFO")
     except Exception as e:
         status_callback(f"Error configuring Gemini: {e}", level="ERROR")
         return None
@@ -154,23 +79,22 @@ def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, tar
             expected_count = len(batch)
             actual_count = len(parsed_translations)
             
-            if not (expected_count - mismatch_tolerance <= actual_count <= expected_count + mismatch_tolerance):
+                        if not (expected_count - mismatch_tolerance <= actual_count <= expected_count + mismatch_tolerance):
                 status_callback(f"Warning: Gemini Batch {batch_num} - Mismatch outside tolerance (expected {expected_count}, got {actual_count}). Falling back to individual.", level="WARNING")
                 raise ValueError("Batch translation mismatch, fallback needed") # Trigger fallback in except block
-            else:
-                # This block executes if the mismatch is within tolerance or there is no mismatch
-                if actual_count != expected_count:
-                    status_callback(f"Warning: Gemini Batch {batch_num} - Slight mismatch (expected {expected_count}, got {actual_count}). Proceeding with tolerance.", level="WARNING")
-                
-                count_to_use = min(expected_count, actual_count)
-                for j in range(count_to_use):
-                    # Preserve the original timestamps exactly
-                    translated_segments.append({
-                        'start': batch[j]['start'],
-                        'end': batch[j]['end'],
-                        'text': parsed_translations[j]
-                    })
-                status_callback(f"Gemini Batch {batch_num}/{num_batches} processed. Got {actual_count}/{expected_count} segments.", level="INFO")
+            
+            if actual_count != expected_count:
+                status_callback(f"Warning: Gemini Batch {batch_num} - Slight mismatch (expected {expected_count}, got {actual_count}). Proceeding with tolerance.", level="WARNING")
+            
+            count_to_use = min(expected_count, actual_count)
+            for j in range(count_to_use):
+                # Preserve the original timestamps exactly
+                translated_segments.append({
+                    'start': batch[j]['start'],
+                    'end': batch[j]['end'],
+                    'text': parsed_translations[j]
+                })
+            status_callback(f"Gemini Batch {batch_num}/{num_batches} processed. Got {actual_count}/{expected_count} segments.", level="INFO")
 
         except Exception as e_batch:
             status_callback(f"Error/Fallback for Gemini batch {batch_num}: {e_batch}. Attempting individual translation...", level="WARNING")
@@ -457,7 +381,7 @@ def translate_text(provider_config, text_segments, target_language, status_callb
     if provider == "Gemini":
         return _translate_with_gemini(
             gemini_api_key=provider_config.get('gemini_api_key'),
-            gemini_model_name=provider_config.get('gemini_model'),
+            gemini_model_name=provider_config.get('gemini_model', GEMINI_MODELS[0] if GEMINI_MODELS else "gemini-2.5-flash-preview-04-17"),
             text_segments=text_segments,
             target_language=target_language,
             status_callback=status_callback,

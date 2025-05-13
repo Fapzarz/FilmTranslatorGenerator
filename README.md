@@ -220,7 +220,7 @@ Proyek ini menggunakan struktur modular untuk memudahkan pengembangan dan pemeli
 *   `config.py`: Pengaturan konfigurasi dan konstanta
 *   `utils/`: Utilitas pemformatan dan penanganan media
 *   `backend/`: Fungsionalitas transkripsi dan terjemahan
-*   `gui/`: Komponen UI dan kelas aplikasi utama
+*   `gui/`: UI components and main application class
 
 ### Lisensi
 
