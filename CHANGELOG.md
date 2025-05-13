@@ -165,6 +165,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `.gitignore` file.
 - Initial `requirements.txt` file.
 
+## [3.0.0-ALPHA.1] - 2024-07-27
+
+### Added
+- (Placeholder for changes in this alpha version)
+
+### Changed
+- (Placeholder for changes in this alpha version)
+
+### Fixed
+- (Placeholder for changes in this alpha version)
+
 </details>
 
 <a name="bahasa-indonesia"></a>
@@ -329,5 +340,16 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Penyimpanan API Key ke `config.json` (versi awal).
 - File `.gitignore`.
 - File `requirements.txt` awal.
+
+## [3.0.0-ALPHA.1] - 2024-07-27
+
+### Added
+- (Placeholder for changes in this alpha version)
+
+### Changed
+- (Placeholder for changes in this alpha version)
+
+### Fixed
+- (Placeholder for changes in this alpha version)
 
 </details>
