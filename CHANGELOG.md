@@ -10,6 +10,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [3.0.0-ALPHA 1] - 2025-06-01
+
+### Added
+- **Advanced Subtitle Editor Dialog**: Complete overhaul of the subtitle editing experience:
+  - Large video player with direct playback controls
+  - Millisecond precision timing controls
+  - Table view with all subtitle segments
+  - Real-time subtitle preview directly on video
+  - CPS (Characters Per Second) and CPL (Characters Per Line) readability indicators
+  - Improved styling options and preview
+  - Undo/Redo functionality for all editing operations
+
+### Changed
+- **Enhanced Subtitle Display**: Replaced QLabel-based overlay with QGraphicsView architecture for more reliable subtitle rendering:
+  - Subtitle text now consistently visible on top of video content in all environments
+  - Maintains proper font size regardless of video scaling
+  - Automatic adjustment of subtitle position and style during playback
+  - Proper word-wrapping and alignment for multi-line subtitles
+- **Main UI Simplification**: Removed embedded video player from main window, replaced with dedicated advanced editor dialog
+- **Improved Code Structure**: Further modularized subtitle editing and display code
+
+### Fixed
+- Video player control issues where playback controls were occasionally unresponsive
+- Audio continuing to play after closing the editor dialog
+- Subtitle overlay display issues on different platforms
+- Layout problems with the video control panel
+
 ## [2.5.10] - 2025-05-20
 
 ### Changed
@@ -165,17 +192,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `.gitignore` file.
 - Initial `requirements.txt` file.
 
-## [3.0.0-ALPHA.1] - 2024-07-27
-
-### Added
-- (Placeholder for changes in this alpha version)
-
-### Changed
-- (Placeholder for changes in this alpha version)
-
-### Fixed
-- (Placeholder for changes in this alpha version)
-
 </details>
 
 <a name="bahasa-indonesia"></a>
@@ -185,6 +201,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [3.0.0-ALPHA 1] - 2025-06-01
+
+### Added
+- **Advanced Subtitle Editor Dialog**: Complete overhaul of the subtitle editing experience:
+  - Large video player with direct playback controls
+  - Millisecond precision timing controls
+  - Table view with all subtitle segments
+  - Real-time subtitle preview directly on video
+  - CPS (Characters Per Second) and CPL (Characters Per Line) readability indicators
+  - Improved styling options and preview
+  - Undo/Redo functionality for all editing operations
+
+### Changed
+- **Enhanced Subtitle Display**: Replaced QLabel-based overlay with QGraphicsView architecture for more reliable subtitle rendering:
+  - Subtitle text now consistently visible on top of video content in all environments
+  - Maintains proper font size regardless of video scaling
+  - Automatic adjustment of subtitle position and style during playback
+  - Proper word-wrapping and alignment for multi-line subtitles
+- **Main UI Simplification**: Removed embedded video player from main window, replaced with dedicated advanced editor dialog
+- **Improved Code Structure**: Further modularized subtitle editing and display code
+
+### Fixed
+- Video player control issues where playback controls were occasionally unresponsive
+- Audio continuing to play after closing the editor dialog
+- Subtitle overlay display issues on different platforms
+- Layout problems with the video control panel
 
 ## [2.5.10] - 2025-05-20
 
@@ -340,16 +383,5 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Penyimpanan API Key ke `config.json` (versi awal).
 - File `.gitignore`.
 - File `requirements.txt` awal.
-
-## [3.0.0-ALPHA.1] - 2024-07-27
-
-### Added
-- (Placeholder for changes in this alpha version)
-
-### Changed
-- (Placeholder for changes in this alpha version)
-
-### Fixed
-- (Placeholder for changes in this alpha version)
 
 </details>
