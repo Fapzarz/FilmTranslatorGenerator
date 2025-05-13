@@ -261,7 +261,7 @@ class AppGUI:
         theme = self.theme_var.get()
         sv_ttk.set_theme(theme)
         self.log_status(f"Theme changed to {theme}")
-
+    
         # Restore preview if a video was selected
         if selected_video_path and hasattr(self, 'preview_manager'):
             self.log_status(f"Refreshing preview for {os.path.basename(selected_video_path)} after theme change.", "VERBOSE")
@@ -281,7 +281,7 @@ class AppGUI:
         if selected_video_path and hasattr(self, 'preview_manager'):
             # self.log_status(f"Restoring preview for {os.path.basename(selected_video_path)} due to UI update.", "VERBOSE")
             self.preview_manager.update_video_preview_info(selected_video_path)
-
+    
     def copy_to_clipboard(self):
         """Copy output text to clipboard"""
         content = self.text_widgets['output'].get(1.0, tk.END)
@@ -331,16 +331,16 @@ class AppGUI:
         self.anthropic_model_var.set(config_data.get('anthropic_model', defaults['anthropic_model']))
         self.gemini_model_var.set(config_data.get('gemini_model', defaults.get('gemini_model', GEMINI_MODELS[0] if GEMINI_MODELS else ''))) # Load Gemini model
         
-        self.target_language.set(config_data.get('target_language', defaults['target_language']))
-        self.whisper_model_name_var.set(config_data.get('whisper_model', defaults['whisper_model']))
-        self.device_var.set(config_data.get('device', defaults['device']))
-        self.compute_type_var.set(config_data.get('compute_type', defaults['compute_type']))
-        self.theme_var.set(config_data.get('theme', defaults['theme']))
-        self.accent_color_var.set(config_data.get('accent_color', defaults['accent_color']))
-        self.batch_size_var.set(str(config_data.get('batch_size', defaults['batch_size'])))
-        self.output_format_var.set(config_data.get('output_format', defaults['output_format']))
-        self.preview_var.set(config_data.get('preview', defaults['preview']))
-        self.auto_save_var.set(config_data.get('auto_save', defaults['auto_save']))
+                self.target_language.set(config_data.get('target_language', defaults['target_language']))
+                self.whisper_model_name_var.set(config_data.get('whisper_model', defaults['whisper_model']))
+                self.device_var.set(config_data.get('device', defaults['device']))
+                self.compute_type_var.set(config_data.get('compute_type', defaults['compute_type']))
+                self.theme_var.set(config_data.get('theme', defaults['theme']))
+                self.accent_color_var.set(config_data.get('accent_color', defaults['accent_color']))
+                self.batch_size_var.set(str(config_data.get('batch_size', defaults['batch_size'])))
+                self.output_format_var.set(config_data.get('output_format', defaults['output_format']))
+                self.preview_var.set(config_data.get('preview', defaults['preview']))
+                self.auto_save_var.set(config_data.get('auto_save', defaults['auto_save']))
         self.gemini_temperature_var.set(float(config_data.get('gemini_temperature', defaults['gemini_temperature'])))
         self.gemini_top_p_var.set(float(config_data.get('gemini_top_p', defaults['gemini_top_p'])))
         self.gemini_top_k_var.set(int(config_data.get('gemini_top_k', defaults['gemini_top_k'])))
@@ -434,7 +434,7 @@ class AppGUI:
             self.log_status("Saved settings to config.")
         except Exception as e:
             self.log_status(f"Warning: Could not save config file: {e}")
-    
+
     def log_status(self, message, level="INFO"):
         """Appends a message to the status text area with timestamp, respects extensive logging setting."""
         if level == "VERBOSE" and self.extensive_logging_var.get() != "On":
@@ -444,10 +444,10 @@ class AppGUI:
         # print(f"LOG [{level}] {datetime.now().strftime("%H:%M:%S")}: {message}")
 
         if hasattr(self, 'text_widgets') and 'log' in self.text_widgets:
-            status_text = self.text_widgets['log']
+        status_text = self.text_widgets['log']
             status_text.configure(state='normal')
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            status_text.insert(tk.END, f"[{timestamp}] {message}\n")
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        status_text.insert(tk.END, f"[{timestamp}] {message}\n")
             status_text.see(tk.END)
             status_text.configure(state='disabled')
         
@@ -456,7 +456,7 @@ class AppGUI:
         
         # Safely update status_label if it exists
         if hasattr(self, 'status_label') and self.status_label is not None:
-            self.status_label.config(text=message)
+        self.status_label.config(text=message)
 
     def display_output(self, content):
         """Displays content in the output area."""
