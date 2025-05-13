@@ -287,57 +287,54 @@ def _translate_with_openai(openai_api_key, openai_model_name, text_segments, tar
     status_callback("OpenAI translation finished.", level="INFO")
     return translated_segments
 
-def _translate_with_deepseek(deepseek_api_key, deepseek_model_name, text_segments, target_language, status_callback, batch_size_setting):
-    """Translates text segments using DeepSeek API (via OpenAI compatible endpoint), segment by segment."""
+def _translate_with_deepseek(deepseek_api_key, text_segments, target_language, status_callback, batch_size_setting):
+    """Translates text segments using DeepSeek API."""
     if not deepseek_api_key:
         status_callback("Error: DeepSeek API Key is missing.", level="ERROR")
         return None
-
+    
     try:
-        # DeepSeek uses an OpenAI-compatible API
-        client = openai.OpenAI(
-            api_key=deepseek_api_key,
-            base_url="https://api.deepseek.com/v1" # or "https://api.deepseek.com"
-        )
-        status_callback(f"Configured DeepSeek with model: {deepseek_model_name}. Translating to {target_language}...", level="INFO")
+        from deepseek import DeepSeekAI  # Import DeepSeek client
+        client = DeepSeekAI(api_key=deepseek_api_key)
+        status_callback(f"Configured DeepSeek. Translating to {target_language}...", level="INFO")
+    except ImportError:
+        status_callback("Error: DeepSeek Python package not found. Please install with 'pip install deepseek'", level="ERROR")
+        return None
     except Exception as e:
         status_callback(f"Error configuring DeepSeek client: {e}", level="ERROR")
         return None
-
+    
     translated_segments = []
     total_segments = len(text_segments)
-
-    # For DeepSeek, we'll also process segment by segment similar to OpenAI for now.
-    # Batching could be explored later if needed, by adapting Gemini's batching logic.
+    
     for i, segment in enumerate(text_segments):
-        status_callback(f"Processing segment {i+1}/{total_segments} with DeepSeek ({deepseek_model_name})...", level="INFO")
+        status_callback(f"Processing segment {i+1}/{total_segments} with DeepSeek...", level="INFO")
         text_to_translate = segment['text'].strip()
         if not text_to_translate:
             translated_segments.append({
                 'start': segment['start'],
                 'end': segment['end'],
-                'text': ''
+                'text': ''  # Empty input, empty output
             })
             continue
-
-        # Prompt for DeepSeek (can be similar to OpenAI's)
-        # It's good practice to specify the role clearly.
-        system_prompt = f"You are a precise language translator. Translate the user's text to {target_language}. Output ONLY the translated text. Do not add any explanations, introductions, or conversational phrases."
-        user_prompt = f"Translate to {target_language}: {text_to_translate}"
+        
+        system_prompt = f"You are a helpful assistant that translates text into {target_language}. Output ONLY the translated text, without any additional explanations, introductions, or conversational phrases."
+        user_prompt = f"Translate the following text into {target_language}:\n\n{text_to_translate}"
         
         status_callback(f"VERBOSE: Sending prompt to DeepSeek for segment {i+1}: {user_prompt[:100]}...", level="VERBOSE")
-
+        
         try:
-            chat_completion = client.chat.completions.create(
+            response = client.chat.completions.create(
+                model=DEEPSEEK_MODEL,  # Using the default model from config
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                model=deepseek_model_name, # e.g., "deepseek-chat"
-                temperature=0.1, # Lower for direct translation
-                # max_tokens can be set if needed
+                temperature=0.2,
+                max_tokens=1024
             )
-            translated_text = chat_completion.choices[0].message.content.strip()
+            
+            translated_text = response.choices[0].message.content.strip()
             status_callback(f"VERBOSE: Received response from DeepSeek for segment {i+1}: {translated_text[:100]}...", level="VERBOSE")
             
             translated_segments.append({
@@ -345,84 +342,62 @@ def _translate_with_deepseek(deepseek_api_key, deepseek_model_name, text_segment
                 'end': segment['end'],
                 'text': translated_text
             })
-
-        except openai.APIError as e_api: # DeepSeek might raise OpenAI compatible errors
-            status_callback(f"DeepSeek API Error on segment {i+1}: {e_api}. Skipping.", level="ERROR")
-            translated_segments.append({
-                'start': segment['start'],
-                'end': segment['end'],
-                'text': f"[DeepSeek API Error] {segment['text']}"
-            })
-        except Exception as e_generic:
-            status_callback(f"Generic error with DeepSeek on segment {i+1}: {e_generic}. Skipping.", level="ERROR")
-            translated_segments.append({
-                'start': segment['start'],
-                'end': segment['end'],
-                'text': f"[DeepSeek Translation Error] {segment['text']}"
-            })
             
+        except Exception as e:
+            status_callback(f"Error translating segment {i+1} with DeepSeek: {e}", level="ERROR")
+            translated_segments.append({
+                'start': segment['start'],
+                'end': segment['end'],
+                'text': f"[Translation Error] {text_to_translate}"
+            })
+    
     status_callback("DeepSeek translation finished.", level="INFO")
     return translated_segments
 
 def _translate_with_anthropic(anthropic_api_key, anthropic_model_name, text_segments, target_language, status_callback, batch_size_setting):
-    """Translates text segments using Anthropic Claude API, segment by segment."""
+    """Translates text segments using Anthropic API."""
     if not anthropic_api_key:
         status_callback("Error: Anthropic API Key is missing.", level="ERROR")
         return None
-
+    
     try:
         client = anthropic.Anthropic(api_key=anthropic_api_key)
-        status_callback(f"Configured Anthropic Claude with model: {anthropic_model_name}. Translating to {target_language}...", level="INFO")
+        status_callback(f"Configured Anthropic with model: {anthropic_model_name}. Translating to {target_language}...", level="INFO")
     except Exception as e:
         status_callback(f"Error configuring Anthropic client: {e}", level="ERROR")
         return None
-
+    
     translated_segments = []
     total_segments = len(text_segments)
-
+    
     for i, segment in enumerate(text_segments):
-        status_callback(f"Processing segment {i+1}/{total_segments} with Anthropic ({anthropic_model_name})...", level="INFO")
+        status_callback(f"Processing segment {i+1}/{total_segments} with Anthropic...", level="INFO")
         text_to_translate = segment['text'].strip()
         if not text_to_translate:
             translated_segments.append({
                 'start': segment['start'],
                 'end': segment['end'],
-                'text': '' 
+                'text': ''  # Empty input, empty output
             })
             continue
-
-        # Anthropic's prompt structure can be a bit different.
-        # Claude works well with a direct instruction in the user message.
-        # System prompts are also supported and can be used for overall instructions.
-        # For simple translation, a direct user message is often sufficient.
-        # Example: client.messages.create(model="...", max_tokens=..., messages=[{"role": "user", "content": "Translate...
         
-        prompt_content = f"Translate the following text into {target_language}. Output ONLY the translated text itself, without any additional explanations, introductions, or conversational phrases.\\n\\nText to translate: {text_to_translate}"
+        system_prompt = f"You are a translator that translates text into {target_language}. Output ONLY the translated text."
+        user_prompt = f"Translate the following text into {target_language}:\n\n{text_to_translate}"
         
-        status_callback(f"VERBOSE: Sending prompt to Anthropic for segment {i+1}: {prompt_content[:100]}...", level="VERBOSE")
-
+        status_callback(f"VERBOSE: Sending prompt to Anthropic for segment {i+1}: {user_prompt[:100]}...", level="VERBOSE")
+        
         try:
-            # Anthropic API expects messages in a list.
-            # For single turn, it's one user message.
-            # The system prompt can be added as a top-level parameter 'system'
             message = client.messages.create(
                 model=anthropic_model_name,
-                max_tokens=1024, # Adjust as needed, this is a common default
+                max_tokens=1024,
+                temperature=0.2,
+                system=system_prompt,
                 messages=[
-                    {
-                        "role": "user",
-                        "content": prompt_content
-                    }
-                ],
-                temperature=0.1, # Lower for more direct translation
-                # Other parameters like top_p, top_k can be added if needed.
+                    {"role": "user", "content": user_prompt}
+                ]
             )
-            # The response structure is a list of content blocks. For text, it's usually the first one.
-            translated_text = ""
-            if message.content and isinstance(message.content, list) and len(message.content) > 0:
-                if hasattr(message.content[0], 'text'):
-                    translated_text = message.content[0].text.strip()
             
+            translated_text = message.content[0].text.strip()
             status_callback(f"VERBOSE: Received response from Anthropic for segment {i+1}: {translated_text[:100]}...", level="VERBOSE")
             
             translated_segments.append({
@@ -430,71 +405,111 @@ def _translate_with_anthropic(anthropic_api_key, anthropic_model_name, text_segm
                 'end': segment['end'],
                 'text': translated_text
             })
-
-        except anthropic.APIError as e_api:
-            status_callback(f"Anthropic API Error on segment {i+1}: {e_api}. Skipping.", level="ERROR")
-            translated_segments.append({
-                'start': segment['start'],
-                'end': segment['end'],
-                'text': f"[Anthropic API Error] {segment['text']}"
-            })
-        except Exception as e_generic:
-            status_callback(f"Generic error with Anthropic on segment {i+1}: {e_generic}. Skipping.", level="ERROR")
-            translated_segments.append({
-                'start': segment['start'],
-                'end': segment['end'],
-                'text': f"[Anthropic Translation Error] {segment['text']}"
-            })
             
+        except Exception as e:
+            status_callback(f"Error translating segment {i+1} with Anthropic: {e}", level="ERROR")
+            translated_segments.append({
+                'start': segment['start'],
+                'end': segment['end'],
+                'text': f"[Translation Error] {text_to_translate}"
+            })
+    
     status_callback("Anthropic translation finished.", level="INFO")
     return translated_segments 
 
-def translate_text(provider_config, text_segments, target_language, status_callback, batch_size_setting):
-    """General function to translate text based on the selected provider."""
-    provider = provider_config.get('name')
-    status_callback(f"Translation initiated with provider: {provider}", level="INFO")
-
-    if provider == "Gemini":
-        return _translate_with_gemini(
-            gemini_api_key=provider_config.get('gemini_api_key'),
-            gemini_model_name=provider_config.get('gemini_model'),
-            text_segments=text_segments,
-            target_language=target_language,
-            status_callback=status_callback,
-            batch_size=batch_size_setting, # Use the general batch size setting
-            gemini_temperature=provider_config.get('gemini_temperature', 0.2), # Default if not in provider_config
-            gemini_top_p=provider_config.get('gemini_top_p', 0.95),
-            gemini_top_k=provider_config.get('gemini_top_k', 40)
-        )
-    elif provider == "OpenAI":
-        return _translate_with_openai(
-            openai_api_key=provider_config.get('openai_api_key'),
-            openai_model_name=provider_config.get('openai_model', OPENAI_MODELS[0] if OPENAI_MODELS else "gpt-3.5-turbo"), # Default model
-            text_segments=text_segments,
-            target_language=target_language,
-            status_callback=status_callback,
-            batch_size_setting=batch_size_setting # Pass batch_size_setting
-        )
-    elif provider == "DeepSeek":
-        return _translate_with_deepseek(
-            deepseek_api_key=provider_config.get('deepseek_api_key'),
-            deepseek_model_name=DEEPSEEK_MODEL, # Fixed model from config
-            text_segments=text_segments,
-            target_language=target_language,
-            status_callback=status_callback,
-            batch_size_setting=batch_size_setting 
-        )
-    elif provider == "Anthropic":
-        return _translate_with_anthropic(
-            anthropic_api_key=provider_config.get('anthropic_api_key'),
-            anthropic_model_name=provider_config.get('anthropic_model', ANTHROPIC_MODELS[0] if ANTHROPIC_MODELS else "claude-3-opus-20240229"),
-            text_segments=text_segments,
-            target_language=target_language,
-            status_callback=status_callback,
-            batch_size_setting=batch_size_setting
-        )
-    # elif provider == "Local Model":
-    #     # return _translate_with_local_model(...)
-    else:
-        status_callback(f"Error: Unknown translation provider '{provider}'.", level="ERROR")
+def translate_text(provider_config, text_segments, target_language, status_callback=None, batch_size_setting=None):
+    """
+    Translates the given text segments using the specified provider.
+    
+    Args:
+        provider_config: Dictionary with provider settings
+        text_segments: List of segments with 'start', 'end', and 'text' keys
+        target_language: Language to translate to
+        status_callback: Function to call for status updates
+        batch_size_setting: Number of segments to process at once
+    
+    Returns:
+        List of translated segments with original timestamps, or None on failure
+    """
+    if not callable(status_callback):
+        # Create a no-op callback if none provided
+        status_callback = lambda msg, level="INFO": None
+    
+    if not text_segments:
+        status_callback("No segments to translate.", "WARNING")
+        return None
+    
+    # Set default batch size if not provided
+    batch_size = batch_size_setting or DEFAULT_BATCH_SIZE
+    provider_name = provider_config.get('name')
+    
+    try:
+        if provider_name == "Gemini":
+            gemini_api_key = provider_config.get('gemini_api_key')
+            gemini_model = provider_config.get('gemini_model')
+            gemini_temperature = float(provider_config.get('gemini_temperature', 0.0))
+            gemini_top_p = float(provider_config.get('gemini_top_p', 1.0))
+            gemini_top_k = int(provider_config.get('gemini_top_k', 40))
+            
+            if not gemini_api_key:
+                status_callback("Error: Gemini API key is missing.", "ERROR")
+                return None
+            
+            status_callback(f"Starting translation with Gemini model '{gemini_model}' to {target_language}...", "INFO")
+            return _translate_with_gemini(
+                gemini_api_key, gemini_model, text_segments, target_language, 
+                status_callback, batch_size, gemini_temperature, gemini_top_p, gemini_top_k
+            )
+        
+        elif provider_name == "OpenAI":
+            openai_api_key = provider_config.get('openai_api_key')
+            openai_model = provider_config.get('openai_model')
+            
+            if not openai_api_key:
+                status_callback("Error: OpenAI API key is missing.", "ERROR")
+                return None
+            
+            status_callback(f"Starting translation with OpenAI model '{openai_model}' to {target_language}...", "INFO")
+            return _translate_with_openai(
+                openai_api_key, openai_model, text_segments, target_language, 
+                status_callback, batch_size
+            )
+        
+        elif provider_name == "Anthropic":
+            anthropic_api_key = provider_config.get('anthropic_api_key')
+            anthropic_model = provider_config.get('anthropic_model')
+            
+            if not anthropic_api_key:
+                status_callback("Error: Anthropic API key is missing.", "ERROR")
+                return None
+            
+            status_callback(f"Starting translation with Anthropic model '{anthropic_model}' to {target_language}...", "INFO")
+            return _translate_with_anthropic(
+                anthropic_api_key, anthropic_model, text_segments, target_language, 
+                status_callback, batch_size
+            )
+        
+        elif provider_name == "DeepSeek":
+            deepseek_api_key = provider_config.get('deepseek_api_key')
+            
+            if not deepseek_api_key:
+                status_callback("Error: DeepSeek API key is missing.", "ERROR")
+                return None
+            
+            status_callback(f"Starting translation with DeepSeek model to {target_language}...", "INFO")
+            return _translate_with_deepseek(
+                deepseek_api_key, text_segments, target_language, 
+                status_callback, batch_size
+            )
+        
+        elif provider_name == "Local Model":
+            status_callback("Local model translation not yet implemented.", "ERROR")
+            return None
+        
+        else:
+            status_callback(f"Unknown translation provider: {provider_name}", "ERROR")
+            return None
+    
+    except Exception as e:
+        status_callback(f"Translation error with {provider_name}: {e}", "ERROR")
         return None 

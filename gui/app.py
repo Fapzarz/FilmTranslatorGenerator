@@ -202,7 +202,7 @@ class AppGUI:
         main_container.columnconfigure(0, weight=10) # User's preferred weight from previous edit
         main_container.columnconfigure(1, weight=70) # User's preferred weight from previous edit
         main_container.rowconfigure(0, weight=1)
-
+        
         # Create left and right panes using functions from main_layout
         create_left_pane(self, main_container)
         create_right_pane(self, main_container)
