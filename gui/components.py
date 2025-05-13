@@ -50,7 +50,7 @@ def create_advanced_settings_dialog(parent, settings):
     ttk.Label(accent_frame, text="Accent Color:").pack(side=tk.LEFT, padx=5)
     ttk.Combobox(accent_frame, textvariable=settings['accent_color_var'], 
                values=ACCENT_COLORS, state="readonly", width=10).pack(side=tk.LEFT, padx=5)
-
+    
     # --- Translation Provider Settings ---
     provider_frame = ttk.LabelFrame(settings_frame, text="Translation Service Provider", padding="10")
     provider_frame.pack(fill=tk.X, padx=5, pady=10)

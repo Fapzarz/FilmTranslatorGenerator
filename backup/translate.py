@@ -9,7 +9,8 @@ from config import (
     DEFAULT_BATCH_SIZE, 
     OPENAI_MODELS, 
     ANTHROPIC_MODELS, # Added ANTHROPIC_MODELS
-    DEEPSEEK_MODEL # Added DEEPSEEK_MODEL
+    DEEPSEEK_MODEL, # Added DEEPSEEK_MODEL
+    GEMINI_MODELS # Added GEMINI_MODELS
 )
 
 # Placeholder for API key storage/retrieval if not passed directly
@@ -22,14 +23,14 @@ def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, tar
         return None
     try:
         genai.configure(api_key=gemini_api_key)
-        # Consider making model name configurable if more Gemini models are supported
+        # Use the model name selected by the user
         model = genai.GenerativeModel(gemini_model_name)
         generation_config = genai.types.GenerationConfig(
             temperature=gemini_temperature,
             top_p=gemini_top_p,
             top_k=gemini_top_k
         )
-        status_callback(f"Configured Gemini. Translating to {target_language}...", level="INFO")
+        status_callback(f"Configured Gemini with model: {gemini_model_name}. Translating to {target_language}...", level="INFO")
     except Exception as e:
         status_callback(f"Error configuring Gemini: {e}", level="ERROR")
         return None
@@ -78,23 +79,22 @@ def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, tar
             expected_count = len(batch)
             actual_count = len(parsed_translations)
             
-            if not (expected_count - mismatch_tolerance <= actual_count <= expected_count + mismatch_tolerance):
+                        if not (expected_count - mismatch_tolerance <= actual_count <= expected_count + mismatch_tolerance):
                 status_callback(f"Warning: Gemini Batch {batch_num} - Mismatch outside tolerance (expected {expected_count}, got {actual_count}). Falling back to individual.", level="WARNING")
                 raise ValueError("Batch translation mismatch, fallback needed") # Trigger fallback in except block
-            else:
-                # This block executes if the mismatch is within tolerance or there is no mismatch
-                if actual_count != expected_count:
-                    status_callback(f"Warning: Gemini Batch {batch_num} - Slight mismatch (expected {expected_count}, got {actual_count}). Proceeding with tolerance.", level="WARNING")
-                
-                count_to_use = min(expected_count, actual_count)
-                for j in range(count_to_use):
-                    # Preserve the original timestamps exactly
-                    translated_segments.append({
-                        'start': batch[j]['start'],
-                        'end': batch[j]['end'],
-                        'text': parsed_translations[j]
-                    })
-                status_callback(f"Gemini Batch {batch_num}/{num_batches} processed. Got {actual_count}/{expected_count} segments.", level="INFO")
+            
+            if actual_count != expected_count:
+                status_callback(f"Warning: Gemini Batch {batch_num} - Slight mismatch (expected {expected_count}, got {actual_count}). Proceeding with tolerance.", level="WARNING")
+            
+            count_to_use = min(expected_count, actual_count)
+            for j in range(count_to_use):
+                # Preserve the original timestamps exactly
+                translated_segments.append({
+                    'start': batch[j]['start'],
+                    'end': batch[j]['end'],
+                    'text': parsed_translations[j]
+                })
+            status_callback(f"Gemini Batch {batch_num}/{num_batches} processed. Got {actual_count}/{expected_count} segments.", level="INFO")
 
         except Exception as e_batch:
             status_callback(f"Error/Fallback for Gemini batch {batch_num}: {e_batch}. Attempting individual translation...", level="WARNING")
@@ -381,7 +381,7 @@ def translate_text(provider_config, text_segments, target_language, status_callb
     if provider == "Gemini":
         return _translate_with_gemini(
             gemini_api_key=provider_config.get('gemini_api_key'),
-            gemini_model_name=provider_config.get('gemini_model'),
+            gemini_model_name=provider_config.get('gemini_model', GEMINI_MODELS[0] if GEMINI_MODELS else "gemini-2.5-flash-preview-04-17"),
             text_segments=text_segments,
             target_language=target_language,
             status_callback=status_callback,

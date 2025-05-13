@@ -10,7 +10,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [2.5.0] - 2025-05-15
+## [2.5.5] - 2025-05-17
+
+### Changed
+- **Major Code Refactoring**: Significantly refactored the `gui/app.py` module by splitting its functionalities into several dedicated manager and styler modules:
+  - `gui/main_layout.py`: Handles the creation of left and right UI panes.
+  - `gui/project_manager.py`: Manages project saving and loading logic.
+  - `gui/queue_manager.py`: Controls video queue management logic.
+  - `gui/video_processor.py`: Contains video processing logic and Whisper model loading.
+  - `gui/subtitle_styler.py`: Manages subtitle styling, style preview, and application to SRT files.
+  - `gui/editor_manager.py`: Handles logic for loading, parsing, and applying changes from the subtitle editor.
+- This refactoring improves code organization, maintainability, and scalability.
+
+### Fixed
+- Corrected video path retrieval in the `preview_video` function in `gui/app.py`.
+- Removed an unused `re` import from `gui/app.py`.
+- Removed a redundant `_update_queue_statistics` method from `gui/app.py` as its functionality is handled by `gui/queue_manager.py`.
+
+### Improved
+- Subtitle editor now automatically refreshes its content after applying changes, showing the parsed and cleaned segments.
+- Configuration saving is no longer triggered on every subtitle style change for a specific video; style data is saved with project or main configuration saves.
+
+## [2.2.5] - 2025-05-13
 
 ### Added
 - **Multiple Gemini Models Support**: Added ability to choose between Gemini models:
@@ -144,16 +165,37 @@ Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [2.5.0] - 2025-05-15
+## [2.5.5] - 2025-05-17
+
+### Changed
+- **Refaktorisasi Kode Mayor**: Melakukan refaktorisasi signifikan pada modul `gui/app.py` dengan memecah fungsionalitasnya ke beberapa modul manager dan styler khusus:
+  - `gui/main_layout.py`: Menangani pembuatan panel UI kiri dan kanan.
+  - `gui/project_manager.py`: Mengelola logika penyimpanan dan pemuatan proyek.
+  - `gui/queue_manager.py`: Mengontrol logika manajemen antrean video.
+  - `gui/video_processor.py`: Berisi logika pemrosesan video dan pemuatan model Whisper.
+  - `gui/subtitle_styler.py`: Mengelola logika styling subtitle, pratinjau gaya, dan penerapan ke file SRT.
+  - `gui/editor_manager.py`: Menangani logika untuk memuat, mem-parsing, dan menerapkan perubahan dari editor subtitle.
+- Refaktorisasi ini meningkatkan organisasi kode, kemudahan pemeliharaan, dan skalabilitas.
+
+### Fixed
+- Memperbaiki pengambilan path video pada fungsi `preview_video` di `gui/app.py`.
+- Menghapus impor `re` yang tidak digunakan dari `gui/app.py`.
+- Menghapus metode `_update_queue_statistics` yang redundan dari `gui/app.py` karena fungsionalitasnya ditangani oleh `gui/queue_manager.py`.
+
+### Improved
+- Editor subtitle sekarang secara otomatis menyegarkan kontennya setelah menerapkan perubahan, menampilkan segmen yang telah di-parse dan dibersihkan.
+- Penyimpanan konfigurasi tidak lagi dipicu pada setiap perubahan gaya subtitle untuk video tertentu; data gaya disimpan bersama dengan penyimpanan proyek atau konfigurasi utama.
+
+## [2.2.5] - 2025-05-13
 
 ### Added
-- **Dukungan Berbagai Model Gemini**: Menambahkan kemampuan untuk memilih antara model Gemini:
-  - `gemini-2.5-flash-preview-04-17` (default): Direkayasa untuk respons yang lebih cepat
-  - `gemini-2.5-pro-exp-03-25`: Kualitas yang lebih tinggi untuk terjemahan yang lebih kompleks
-- **Peningkatan Tata Letak UI**: Peningkatan proporsi panel dan preview style subtitle yang lebih baik
-  - Lebar panel kiri disesuaikan untuk keterlihatan kontrol yang lebih baik
-  - Posisi preview style subtitle diperbaiki untuk menampilkan teks yang benar-benar berpusat
-  - Penambahan pemindahan otomatis pada ukuran jendela untuk preview subtitle
+- **Multiple Gemini Models Support**: Added ability to choose between Gemini models:
+  - `gemini-2.5-flash-preview-04-17` (default): Optimized for faster response
+  - `gemini-2.5-pro-exp-03-25`: Higher quality for more complex translations
+- **Improved UI Layout**: Enhanced panel proportions and better subtitle style preview
+  - Adjusted left panel width for better visibility of controls
+  - Fixed subtitle style preview positioning to properly center text
+  - Added automatic repositioning on window resize for subtitle preview
 
 ### Fixed
 - Masalah indentasi di `backend/translate.py` yang berkaitan dengan terjemahan batch
