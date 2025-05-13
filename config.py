@@ -62,7 +62,7 @@ PREVIEW_OPTIONS = ["On", "Off"]
 AUTO_SAVE_OPTIONS = ["On", "Off"]
 
 # --- App Info ---
-APP_VERSION = "2.2.0"
+APP_VERSION = "2.5.0"
 APP_TITLE = "Film Translator Generator"
 GITHUB_URL = "https://github.com/Fapzarz/FilmTranslatorGenerator"
 
@@ -78,6 +78,30 @@ DEFAULT_DEEPSEEK_API_KEY = ""
 DEFAULT_OPENAI_MODEL = OPENAI_MODELS[0] if OPENAI_MODELS else "gpt-3.5-turbo"
 DEFAULT_ANTHROPIC_MODEL = ANTHROPIC_MODELS[0] if ANTHROPIC_MODELS else "claude-3-opus-20240229"
 
+# --- Gemini Models ---
+GEMINI_MODELS = ["gemini-2.5-flash-preview-04-17", "gemini-2.5-pro-exp-03-25"]
+DEFAULT_GEMINI_MODEL = GEMINI_MODELS[0] # Default to flash model
+
+# --- Subtitle Style Constants ---
+SUBTITLE_FONTS = ["Arial", "Helvetica", "Times New Roman", "Verdana", "Tahoma", "Impact"]
+SUBTITLE_COLORS = ["white", "yellow", "cyan", "lime", "pink", "lightgray"]
+SUBTITLE_SIZES = ["12", "14", "16", "18", "20", "22", "24", "28", "32"]
+SUBTITLE_POSITIONS = ["bottom", "middle", "top"] # More descriptive
+SUBTITLE_OUTLINE_COLORS = ["black", "white", "darkgray", "red", "blue"]
+SUBTITLE_OUTLINE_WIDTHS = ["0", "1", "2", "3", "4"] # '0' for no outline
+SUBTITLE_BG_COLORS = ["transparent", "black", "darkgray", "white", "blue"]
+SUBTITLE_BG_OPACITY = ["0", "25", "50", "75", "100"] # Percentage based
+
+# --- Default Subtitle Style Settings ---
+DEFAULT_SUBTITLE_FONT = SUBTITLE_FONTS[0]
+DEFAULT_SUBTITLE_COLOR = SUBTITLE_COLORS[0]
+DEFAULT_SUBTITLE_SIZE = SUBTITLE_SIZES[2] # e.g., "16"
+DEFAULT_SUBTITLE_POSITION = SUBTITLE_POSITIONS[0]
+DEFAULT_SUBTITLE_OUTLINE_COLOR = SUBTITLE_OUTLINE_COLORS[0]
+DEFAULT_SUBTITLE_OUTLINE_WIDTH = SUBTITLE_OUTLINE_WIDTHS[1] # e.g., "1"
+DEFAULT_SUBTITLE_BG_COLOR = SUBTITLE_BG_COLORS[0]
+DEFAULT_SUBTITLE_BG_OPACITY = SUBTITLE_BG_OPACITY[0]
+
 def get_default_config():
     """Return the default configuration settings."""
     return {
@@ -89,6 +113,7 @@ def get_default_config():
         'openai_model': DEFAULT_OPENAI_MODEL,
         'anthropic_model': DEFAULT_ANTHROPIC_MODEL,
         # DeepSeek model is fixed for now, so no 'deepseek_model' entry here for user selection
+        'gemini_model': DEFAULT_GEMINI_MODEL, # Added Gemini model selection
         'target_language': 'English',
         'whisper_model': 'large-v2',
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
@@ -102,5 +127,14 @@ def get_default_config():
         'gemini_temperature': DEFAULT_GEMINI_TEMPERATURE,
         'gemini_top_p': DEFAULT_GEMINI_TOP_P,
         'gemini_top_k': DEFAULT_GEMINI_TOP_K,
-        'extensive_logging': DEFAULT_EXTENSIVE_LOGGING
+        'extensive_logging': DEFAULT_EXTENSIVE_LOGGING,
+        # Add default subtitle styles
+        'subtitle_font': DEFAULT_SUBTITLE_FONT,
+        'subtitle_color': DEFAULT_SUBTITLE_COLOR,
+        'subtitle_size': DEFAULT_SUBTITLE_SIZE,
+        'subtitle_position': DEFAULT_SUBTITLE_POSITION,
+        'subtitle_outline_color': DEFAULT_SUBTITLE_OUTLINE_COLOR,
+        'subtitle_outline_width': DEFAULT_SUBTITLE_OUTLINE_WIDTH,
+        'subtitle_bg_color': DEFAULT_SUBTITLE_BG_COLOR,
+        'subtitle_bg_opacity': DEFAULT_SUBTITLE_BG_OPACITY
     } 

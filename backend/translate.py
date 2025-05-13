@@ -15,7 +15,7 @@ from config import (
 # Placeholder for API key storage/retrieval if not passed directly
 # For now, API keys are expected to be passed in provider_config
 
-def _translate_with_gemini(gemini_api_key, text_segments, target_language, status_callback, batch_size, gemini_temperature, gemini_top_p, gemini_top_k):
+def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, target_language, status_callback, batch_size, gemini_temperature, gemini_top_p, gemini_top_k):
     """Translates text segments using Gemini API."""
     if not gemini_api_key:
         status_callback("Error: Gemini API Key is missing.", level="ERROR")
@@ -23,7 +23,7 @@ def _translate_with_gemini(gemini_api_key, text_segments, target_language, statu
     try:
         genai.configure(api_key=gemini_api_key)
         # Consider making model name configurable if more Gemini models are supported
-        model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17')
+        model = genai.GenerativeModel(gemini_model_name)
         generation_config = genai.types.GenerationConfig(
             temperature=gemini_temperature,
             top_p=gemini_top_p,
@@ -84,7 +84,7 @@ def _translate_with_gemini(gemini_api_key, text_segments, target_language, statu
             
             if actual_count != expected_count:
                 status_callback(f"Warning: Gemini Batch {batch_num} - Slight mismatch (expected {expected_count}, got {actual_count}). Proceeding with tolerance.", level="WARNING")
-            
+                
             count_to_use = min(expected_count, actual_count)
             for j in range(count_to_use):
                 # Preserve the original timestamps exactly
@@ -380,6 +380,7 @@ def translate_text(provider_config, text_segments, target_language, status_callb
     if provider == "Gemini":
         return _translate_with_gemini(
             gemini_api_key=provider_config.get('gemini_api_key'),
+            gemini_model_name=provider_config.get('gemini_model'),
             text_segments=text_segments,
             target_language=target_language,
             status_callback=status_callback,

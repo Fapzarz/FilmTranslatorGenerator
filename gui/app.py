@@ -19,7 +19,10 @@ from config import (
     APP_TITLE, CONFIG_FILE, get_default_config, LANGUAGES, 
     WHISPER_MODELS, DEVICES, COMPUTE_TYPES, OUTPUT_FORMATS, 
     GITHUB_URL, APP_VERSION, TRANSLATION_PROVIDERS, 
-    OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODEL # Added ANTHROPIC_MODELS, DEEPSEEK_MODEL
+    OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODEL, GEMINI_MODELS, # Added GEMINI_MODELS
+    # Add subtitle style constants
+    SUBTITLE_FONTS, SUBTITLE_COLORS, SUBTITLE_SIZES, SUBTITLE_POSITIONS,
+    SUBTITLE_OUTLINE_COLORS, SUBTITLE_OUTLINE_WIDTHS, SUBTITLE_BG_COLORS, SUBTITLE_BG_OPACITY
 )
 from backend.transcribe import transcribe_video, load_whisper_model
 from backend.translate import translate_text
@@ -56,6 +59,7 @@ class AppGUI:
         self.openai_api_key_var = tk.StringVar() 
         self.anthropic_api_key_var = tk.StringVar() # New for Anthropic API Key
         self.deepseek_api_key_var = tk.StringVar() # New for DeepSeek API Key
+        self.gemini_model_var = tk.StringVar() # New for Gemini model selection
         
         self.openai_model_var = tk.StringVar() 
         self.anthropic_model_var = tk.StringVar() # New for Anthropic model
@@ -74,6 +78,16 @@ class AppGUI:
         self.gemini_temperature_var = tk.DoubleVar()
         self.gemini_top_p_var = tk.DoubleVar()
         self.gemini_top_k_var = tk.IntVar()
+        
+        # Subtitle style variables
+        self.subtitle_font_var = tk.StringVar(value=SUBTITLE_FONTS[0])
+        self.subtitle_color_var = tk.StringVar(value=SUBTITLE_COLORS[0])
+        self.subtitle_size_var = tk.StringVar(value=SUBTITLE_SIZES[2])  # Default to a medium size (index 2)
+        self.subtitle_position_var = tk.StringVar(value=SUBTITLE_POSITIONS[0])
+        self.subtitle_outline_color_var = tk.StringVar(value=SUBTITLE_OUTLINE_COLORS[0])
+        self.subtitle_outline_width_var = tk.StringVar(value=SUBTITLE_OUTLINE_WIDTHS[1])  # Default width of 1
+        self.subtitle_bg_color_var = tk.StringVar(value=SUBTITLE_BG_COLORS[0])
+        self.subtitle_bg_opacity_var = tk.StringVar(value=SUBTITLE_BG_OPACITY[0])
         
         # Configure button style
         self.style = ttk.Style()
@@ -94,6 +108,9 @@ class AppGUI:
         # Load configuration
         self._load_config()
         self.update_compute_types()
+        
+        # Update subtitle preview with loaded settings
+        self.update_subtitle_preview()
         
         # Update theme based on loaded config
         self._apply_theme()
@@ -148,32 +165,48 @@ class AppGUI:
         self.root.config(menu=menubar)
     
     def create_main_frame(self):
-        """Create the main application frame and widgets with an Adobe-like panel layout."""
-        main_frame = ttk.Frame(self.root, padding="5") # Reduced main padding
+        """Create the main application frame and widgets with a fixed, non-resizable Adobe-like panel layout."""
+        main_frame = ttk.Frame(self.root, padding="5")
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # --- Main Horizontal Paned Window (Left: Queue/Controls, Right: Settings/WorkArea) ---
-        main_paned_window = ttk.PanedWindow(main_frame, orient=tk.HORIZONTAL)
-        main_paned_window.pack(fill=tk.BOTH, expand=True)
+        # --- Main Frame with Fixed Layout (replacing the PanedWindow) ---
+        main_container = ttk.Frame(main_frame)
+        main_container.pack(fill=tk.BOTH, expand=True)
+        
+        # Configure column weights for fixed proportions (10:70)
+        # Biarin aja 
+        main_container.columnconfigure(0, weight=10) # Left pane 10%
+        main_container.columnconfigure(1, weight=70) # Right pane 70%
+        main_container.rowconfigure(0, weight=1)
 
         # --- Left Pane: Queue Management & Processing Control ---
-        left_pane_container = ttk.Frame(main_paned_window, padding="5")
-        # Add with a default width, user can resize. Let's give it about 30-35% initially.
-        main_paned_window.add(left_pane_container, weight=1) 
-
+        left_pane_container = ttk.Frame(main_container, padding="5")
+        left_pane_container.grid(row=0, column=0, sticky="nsew", padx=(0, 2))
+        
+        # --- Right Pane: Settings, Preview, and Main Work Area (Notebook) ---
+        right_pane_container = ttk.Frame(main_container, padding="5")
+        right_pane_container.grid(row=0, column=1, sticky="nsew", padx=(2, 0))
+        
+        # --- Left Pane Components ---
+        
+        # Queue control panel
         queue_control_panel = ttk.LabelFrame(left_pane_container, text="File Queue & Processing", padding="10")
         queue_control_panel.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
+        # Queue management frame
         queue_management_frame = ttk.Frame(queue_control_panel) 
         queue_management_frame.pack(fill=tk.X, padx=5, pady=5)
         
+        # Listbox for video queue
         self.video_listbox = tk.Listbox(queue_management_frame, height=8, selectmode=tk.SINGLE)
         self.video_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0,5), pady=5)
 
+        # Scrollbar for listbox
         listbox_scrollbar = ttk.Scrollbar(queue_management_frame, orient=tk.VERTICAL, command=self.video_listbox.yview)
         listbox_scrollbar.pack(side=tk.LEFT, fill=tk.Y, pady=5)
         self.video_listbox.config(yscrollcommand=listbox_scrollbar.set)
 
+        # Queue buttons
         queue_buttons_frame = ttk.Frame(queue_management_frame)
         queue_buttons_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(5,0), pady=5)
 
@@ -202,20 +235,117 @@ class AppGUI:
         # Now pack progress_action_frame below stats_frame
         progress_action_frame.pack(fill=tk.X, padx=5, pady=(5,5)) # Adjusted padding slightly
         
-        # --- Right Pane: Settings, Preview, and Main Work Area (Notebook) ---
-        right_pane_container = ttk.Frame(main_paned_window, padding="5")
-        main_paned_window.add(right_pane_container, weight=2) # Give more weight/space to the right pane
+        # --- Subtitle Style Editor Panel ---
+        subtitle_style_panel = ttk.LabelFrame(left_pane_container, text="Subtitle Style Editor", padding="10")
+        subtitle_style_panel.pack(fill=tk.BOTH, expand=True, padx=2, pady=5)
 
+        # Subtitle Style Settings
+        style_settings_frame = ttk.Frame(subtitle_style_panel)
+        style_settings_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        # Font settings
+        font_frame = ttk.Frame(style_settings_frame)
+        font_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(font_frame, text="Font:", width=10).pack(side=tk.LEFT, padx=(0,5), anchor='w')
+        self.font_combobox = ttk.Combobox(font_frame, textvariable=self.subtitle_font_var, 
+                                          values=SUBTITLE_FONTS, state="readonly", width=18)
+        self.font_combobox.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        
+        # Font size and color in same row
+        size_color_frame = ttk.Frame(style_settings_frame)
+        size_color_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(size_color_frame, text="Size:", width=10).pack(side=tk.LEFT, padx=(0,5), anchor='w')
+        self.size_combobox = ttk.Combobox(size_color_frame, textvariable=self.subtitle_size_var, 
+                                         values=SUBTITLE_SIZES, state="readonly", width=6)
+        self.size_combobox.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(size_color_frame, text="Color:", width=6).pack(side=tk.LEFT, padx=(10,5), anchor='w')
+        self.color_combobox = ttk.Combobox(size_color_frame, textvariable=self.subtitle_color_var, 
+                                          values=SUBTITLE_COLORS, state="readonly", width=10)
+        self.color_combobox.pack(side=tk.LEFT, padx=5)
+        
+        # Position
+        position_frame = ttk.Frame(style_settings_frame)
+        position_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(position_frame, text="Position:", width=10).pack(side=tk.LEFT, padx=(0,5), anchor='w')
+        self.position_combobox = ttk.Combobox(position_frame, textvariable=self.subtitle_position_var, 
+                                             values=SUBTITLE_POSITIONS, state="readonly", width=10)
+        self.position_combobox.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        
+        # Outline settings
+        outline_frame = ttk.Frame(style_settings_frame)
+        outline_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(outline_frame, text="Outline:", width=10).pack(side=tk.LEFT, padx=(0,5), anchor='w')
+        self.outline_width_combobox = ttk.Combobox(outline_frame, textvariable=self.subtitle_outline_width_var, 
+                                                  values=SUBTITLE_OUTLINE_WIDTHS, state="readonly", width=6)
+        self.outline_width_combobox.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(outline_frame, text="Color:", width=6).pack(side=tk.LEFT, padx=(10,5), anchor='w')
+        self.outline_color_combobox = ttk.Combobox(outline_frame, textvariable=self.subtitle_outline_color_var, 
+                                                  values=SUBTITLE_OUTLINE_COLORS, state="readonly", width=10)
+        self.outline_color_combobox.pack(side=tk.LEFT, padx=5)
+        
+        # Background settings
+        bg_frame = ttk.Frame(style_settings_frame)
+        bg_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(bg_frame, text="Background:", width=10).pack(side=tk.LEFT, padx=(0,5), anchor='w')
+        self.bg_color_combobox = ttk.Combobox(bg_frame, textvariable=self.subtitle_bg_color_var, 
+                                             values=SUBTITLE_BG_COLORS, state="readonly", width=12)
+        self.bg_color_combobox.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(bg_frame, text="Opacity:", width=8).pack(side=tk.LEFT, padx=(10,5), anchor='w')
+        self.bg_opacity_combobox = ttk.Combobox(bg_frame, textvariable=self.subtitle_bg_opacity_var, 
+                                               values=SUBTITLE_BG_OPACITY, state="readonly", width=6)
+        self.bg_opacity_combobox.pack(side=tk.LEFT, padx=5)
+        
+        # Subtitle preview frame
+        preview_frame = ttk.LabelFrame(subtitle_style_panel, text="Style Preview", padding="10")
+        preview_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Canvas for showing the subtitle preview - make it wider
+        self.preview_canvas = tk.Canvas(preview_frame, bg="black", height=100, width=300)
+        self.preview_canvas.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Add a sample text on canvas - set it to the center position
+        # We'll just create initial text here, actual positioning is handled in update_subtitle_preview
+        self.preview_canvas.create_text(
+            150, 50, text="Sample Subtitle Text", fill="white", font=("Arial", 14), anchor="center"
+        )
+        
+        # Add binding to ensure text is repositioned when canvas is resized
+        self.preview_canvas.bind("<Configure>", self.update_subtitle_preview)
+        
+        # Apply Style button
+        apply_style_frame = ttk.Frame(subtitle_style_panel)
+        apply_style_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        self.apply_style_button = ttk.Button(apply_style_frame, text="Apply Style", 
+                                           command=self.apply_subtitle_style, style="Accent.TButton")
+        self.apply_style_button.pack(side=tk.RIGHT, padx=5)
+        
+        # Add bindings to update preview when settings change
+        self.font_combobox.bind("<<ComboboxSelected>>", self.update_subtitle_preview)
+        self.size_combobox.bind("<<ComboboxSelected>>", self.update_subtitle_preview)
+        self.color_combobox.bind("<<ComboboxSelected>>", self.update_subtitle_preview)
+        self.position_combobox.bind("<<ComboboxSelected>>", self.update_subtitle_preview)
+        self.outline_width_combobox.bind("<<ComboboxSelected>>", self.update_subtitle_preview)
+        self.outline_color_combobox.bind("<<ComboboxSelected>>", self.update_subtitle_preview)
+        self.bg_color_combobox.bind("<<ComboboxSelected>>", self.update_subtitle_preview)
+        self.bg_opacity_combobox.bind("<<ComboboxSelected>>", self.update_subtitle_preview)
+        
+        # --- RIGHT PANE COMPONENTS ---
+        
         # Container for settings panels (top part of right_pane_container)
         top_right_settings_area = ttk.Frame(right_pane_container)
         top_right_settings_area.pack(fill=tk.X, pady=(0,5))
 
-        # Panel 2.1: Selected Item Preview & Global Settings (will be inside top_right_settings_area)
+        # Panel: Selected Item Preview & Global Settings
         settings_preview_panel = ttk.LabelFrame(top_right_settings_area, text="Preview & Translation Setup", padding="10")
         settings_preview_panel.pack(fill=tk.X, padx=2, pady=2)
         
         preview_sub_panel = ttk.LabelFrame(settings_preview_panel, text="Selected Video Preview", padding="5")
-        preview_sub_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5, ipadx=5, ipady=5) # Added some internal padding
+        preview_sub_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5, ipadx=5, ipady=5)
         
         self.thumbnail_label = ttk.Label(preview_sub_panel) 
         self.thumbnail_label.pack(pady=5, padx=5)
@@ -241,7 +371,7 @@ class AppGUI:
             textvariable=self.translation_provider_var, 
             values=TRANSLATION_PROVIDERS, 
             state="readonly", 
-            width=15 # Adjusted width
+            width=15
         )
         self.provider_combobox.pack(side=tk.LEFT, padx=5)
         self.provider_combobox.bind("<<ComboboxSelected>>", self._update_translation_settings_ui)
@@ -249,9 +379,6 @@ class AppGUI:
         # --- Frame for Provider-Specific Settings (API Key, Model, etc.) ---
         self.provider_details_frame = ttk.Frame(translation_settings_sub_panel)
         self.provider_details_frame.pack(fill=tk.X, expand=True, padx=5, pady=(5,0))
-        
-        # Initial call to populate based on default/loaded provider
-        # This will be called again in _load_config after variables are set
 
         # --- Common Translation Settings (Language, Output Format) ---
         common_settings_frame = ttk.Frame(translation_settings_sub_panel)
@@ -271,10 +398,9 @@ class AppGUI:
                                           values=OUTPUT_FORMATS, state="readonly", width=10)
         self.format_combobox.pack(side=tk.LEFT, padx=5)
         
-        # Panel 2.2: Whisper Settings (also in top_right_settings_area, below or beside settings_preview_panel)
-        # For simplicity, let's pack it below settings_preview_panel within top_right_settings_area
+        # Panel: Whisper Settings
         whisper_frame = ttk.LabelFrame(top_right_settings_area, text="Whisper Transcription Settings", padding="10")
-        whisper_frame.pack(fill=tk.X, padx=2, pady=(5,2)) # Added some top padding
+        whisper_frame.pack(fill=tk.X, padx=2, pady=(5,2))
         
         settings_frame_whisper = ttk.Frame(whisper_frame) 
         settings_frame_whisper.pack(fill=tk.X, padx=5, pady=5)
@@ -299,8 +425,8 @@ class AppGUI:
         for i in range(6): settings_frame_whisper.columnconfigure(i, weight=1)
         
         # --- Main Work Area: Notebook (bottom part of right_pane_container) ---
-        self.notebook, self.text_widgets = create_notebook(right_pane_container) # Parent is now right_pane_container
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=2, pady=(5,2)) # Added some top padding
+        self.notebook, self.text_widgets = create_notebook(right_pane_container)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=2, pady=(5,2))
         
         # Connect the handlers for notebook widgets (ensure this is done after create_notebook)
         self.text_widgets['copy_button'].config(command=self.copy_to_clipboard)
@@ -330,6 +456,7 @@ class AppGUI:
             'extensive_logging_var': self.extensive_logging_var, 
             'translation_provider_var': self.translation_provider_var,
             'gemini_api_key_var': self.gemini_api_key_var,
+            'gemini_model_var': self.gemini_model_var, # Added Gemini model var
             'openai_api_key_var': self.openai_api_key_var,        
             'openai_model_var': self.openai_model_var,            
             'anthropic_api_key_var': self.anthropic_api_key_var,
@@ -417,6 +544,7 @@ class AppGUI:
         
         self.openai_model_var.set(config_data.get('openai_model', defaults['openai_model']))
         self.anthropic_model_var.set(config_data.get('anthropic_model', defaults['anthropic_model']))
+        self.gemini_model_var.set(config_data.get('gemini_model', defaults.get('gemini_model', GEMINI_MODELS[0] if GEMINI_MODELS else ''))) # Load Gemini model
         
         self.target_language.set(config_data.get('target_language', defaults['target_language']))
         self.whisper_model_name_var.set(config_data.get('whisper_model', defaults['whisper_model']))
@@ -432,6 +560,16 @@ class AppGUI:
         self.gemini_top_p_var.set(float(config_data.get('gemini_top_p', defaults['gemini_top_p'])))
         self.gemini_top_k_var.set(int(config_data.get('gemini_top_k', defaults['gemini_top_k'])))
         self.extensive_logging_var.set(config_data.get('extensive_logging', defaults['extensive_logging']))
+
+        # Load subtitle style settings
+        self.subtitle_font_var.set(config_data.get('subtitle_font', defaults['subtitle_font']))
+        self.subtitle_color_var.set(config_data.get('subtitle_color', defaults['subtitle_color']))
+        self.subtitle_size_var.set(config_data.get('subtitle_size', defaults['subtitle_size']))
+        self.subtitle_position_var.set(config_data.get('subtitle_position', defaults['subtitle_position']))
+        self.subtitle_outline_color_var.set(config_data.get('subtitle_outline_color', defaults['subtitle_outline_color']))
+        self.subtitle_outline_width_var.set(config_data.get('subtitle_outline_width', defaults['subtitle_outline_width']))
+        self.subtitle_bg_color_var.set(config_data.get('subtitle_bg_color', defaults['subtitle_bg_color']))
+        self.subtitle_bg_opacity_var.set(config_data.get('subtitle_bg_opacity', defaults['subtitle_bg_opacity']))
 
         # Load persisted queue and processed data
         self.video_queue = config_data.get('video_queue_history', [])
@@ -469,11 +607,12 @@ class AppGUI:
             config_data = {
                 'translation_provider': self.translation_provider_var.get(),
                 'gemini_api_key': self.gemini_api_key_var.get(),
+                'gemini_model': self.gemini_model_var.get(), # Save Gemini model
                 'openai_api_key': self.openai_api_key_var.get(),
-                'anthropic_api_key': self.anthropic_api_key_var.get(),
-                'deepseek_api_key': self.deepseek_api_key_var.get(),
                 'openai_model': self.openai_model_var.get(),
+                'anthropic_api_key': self.anthropic_api_key_var.get(),
                 'anthropic_model': self.anthropic_model_var.get(),
+                'deepseek_api_key': self.deepseek_api_key_var.get(),
                 'target_language': self.target_language.get(),
                 'whisper_model': self.whisper_model_name_var.get(),
                 'device': self.device_var.get(),
@@ -490,7 +629,15 @@ class AppGUI:
                 'extensive_logging': self.extensive_logging_var.get(),
                 # Persist queue and processed data history
                 'video_queue_history': self.video_queue,
-                'processed_file_data_history': self.processed_file_data
+                'processed_file_data_history': self.processed_file_data,
+                'subtitle_font': self.subtitle_font_var.get(),
+                'subtitle_color': self.subtitle_color_var.get(),
+                'subtitle_size': self.subtitle_size_var.get(),
+                'subtitle_position': self.subtitle_position_var.get(),
+                'subtitle_outline_color': self.subtitle_outline_color_var.get(),
+                'subtitle_outline_width': self.subtitle_outline_width_var.get(),
+                'subtitle_bg_color': self.subtitle_bg_color_var.get(),
+                'subtitle_bg_opacity': self.subtitle_bg_opacity_var.get()
             }
             with open(CONFIG_FILE, 'w') as f:
                 json.dump(config_data, f, indent=4)
@@ -750,6 +897,11 @@ class AppGUI:
         current_output_for_saving = file_data['output_content']
         output_format = self.output_format_var.get() # Global output format for now
         
+        # Apply styling if SRT format and styling is available
+        if output_format == "srt" and file_data.get('subtitle_style'):
+            current_output_for_saving = self._apply_style_to_srt(current_output_for_saving, file_data['subtitle_style'])
+            self.log_status("Applied subtitle styling to the saved file")
+        
         if original_video_path:
             base, _ = os.path.splitext(original_video_path)
             default_filename = f"{base}.{output_format}"
@@ -864,12 +1016,11 @@ class AppGUI:
             try:  # Main try for processing a single video file
                 self.update_progress(f"Starting ({video_idx+1}/{len(self.video_queue)}): {os.path.basename(video_file)}...")
                 self.log_status(f"--- Starting Process for {os.path.basename(video_file)} ({video_idx+1}/{len(self.video_queue)}) ---")
-                if video_idx == self.video_listbox.curselection()[0] if self.video_listbox.curselection() else False:
+                if video_idx == (self.video_listbox.curselection()[0] if self.video_listbox.curselection() else -1):
                     self.display_output("")
 
                 self.processed_file_data[video_file]['status'] = 'Processing_Whisper'
                 
-                                                # Initial checks
                 api_key_val = self.gemini_api_key_var.get()
                 target_lang_val = self.target_language.get()
 
@@ -883,25 +1034,23 @@ class AppGUI:
                         (self.translation_provider_var.get() == "OpenAI" and self.openai_api_key_var.get()) or
                         (self.translation_provider_var.get() == "Anthropic" and self.anthropic_api_key_var.get()) or
                         (self.translation_provider_var.get() == "DeepSeek" and self.deepseek_api_key_var.get())):
-                    # Simplified API key check: if selected provider needs a key and it's missing.
                     missing_key_provider = self.translation_provider_var.get()
                     messagebox.showerror("Error", f"API Key for {missing_key_provider} is missing.")
                     self.log_status(f"Error: API Key for {missing_key_provider} missing. Halting queue.")
                     self.update_progress(f"Error: API Key for {missing_key_provider} missing", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_Config'
-                    break  # Stop queue processing for missing API key
+                    break
 
                 if not target_lang_val:
                     messagebox.showerror("Error", "Please select a target language.")
                     self.log_status("Error: Target language not selected. Halting queue.")
                     self.update_progress("Error: No target language", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_Config'
-                    break  # Stop queue processing
+                    break
 
-                # All initial checks passed, proceed with core processing
-                self._save_config()  # Save general app settings
+                self._save_config()
 
-                try:  # For batch_size conversion
+                try:
                     batch_size = int(self.batch_size_var.get())
                     if batch_size <= 0:
                         batch_size = get_default_config()['batch_size']
@@ -913,85 +1062,90 @@ class AppGUI:
                     self.log_status(f"--- Process Failed (Whisper Model Load) for {os.path.basename(video_file)} ---")
                     self.update_progress("Failed to load Whisper model", is_error=True)
                     self.processed_file_data[video_file]['status'] = 'Error_WhisperModel'
-                    continue  # Skip to next file
+                    continue
                 
-                # Whisper model loaded, proceed to transcription
                 self.update_progress(f"Transcribing {os.path.basename(video_file)}...")
                 self.log_status(f"Starting transcription for {os.path.basename(video_file)}...")
                 self.processed_file_data[video_file]['status'] = 'Transcribing'
                 transcribed_segments = transcribe_video(self.whisper_model, video_file, self.log_status)
                 self.processed_file_data[video_file]['transcribed_segments'] = transcribed_segments
-                self.transcribed_segments = transcribed_segments
 
                 if not transcribed_segments:
-                    self.log_status(f"--- Process Failed (Transcription) for {os.path.basename(video_file)} ---")
-                    self.update_progress(f"Transcription failed for {os.path.basename(video_file)}", is_error=True)
-                    self.processed_file_data[video_file]['status'] = 'Error_Transcription'
+                    self.log_status(f"Transcription resulted in no segments for {os.path.basename(video_file)}.")
+                    self.update_progress(f"No segments from transcription: {os.path.basename(video_file)}", is_error=True)
+                    self.processed_file_data[video_file]['status'] = 'Error_TranscriptionEmpty'
+                    if video_idx == (self.video_listbox.curselection()[0] if self.video_listbox.curselection() else -1):
+                        self.display_output(f"Transcription failed for {os.path.basename(video_file)}.")
+                        self.update_comparison_view() 
+                        self._load_segments_to_editor(None) 
                     continue
-                
-                segments_count = len(transcribed_segments)
-                self.update_progress(f"Transcribed {segments_count} segments for {os.path.basename(video_file)}")
-                self.log_status(f"Transcription completed for {os.path.basename(video_file)} with {segments_count} segments")
 
-                # Proceed to translation only if transcription was successful
-                self.update_progress(f"Translating {os.path.basename(video_file)} to {target_lang_val}...")
-                self.log_status(f"Starting translation for {os.path.basename(video_file)} to {target_lang_val}...")
+                self.log_status("Transcription complete.")
+                if video_idx == (self.video_listbox.curselection()[0] if self.video_listbox.curselection() else -1):
+                    self.update_comparison_view()
+
+
                 self.processed_file_data[video_file]['status'] = 'Translating'
+                self.update_progress(f"Translating {os.path.basename(video_file)}...")
+                self.log_status(f"Starting translation for {os.path.basename(video_file)}...")
                 
                 selected_provider = self.translation_provider_var.get()
-                provider_config = {
+                provider_config_for_translation = {
                     'name': selected_provider,
+                    'gemini_api_key': self.gemini_api_key_var.get(),
+                    'gemini_temperature': self.gemini_temperature_var.get(),
+                    'gemini_top_p': self.gemini_top_p_var.get(),
+                    'gemini_top_k': self.gemini_top_k_var.get(),
+                    'gemini_model': self.gemini_model_var.get(), 
+                    'openai_api_key': self.openai_api_key_var.get(),
+                    'openai_model': self.openai_model_var.get(),
+                    'anthropic_api_key': self.anthropic_api_key_var.get(),
+                    'anthropic_model': self.anthropic_model_var.get(),
+                    'deepseek_api_key': self.deepseek_api_key_var.get()
                 }
-                
-                # Add provider-specific configurations
-                if selected_provider == "Gemini":
-                    provider_config['gemini_api_key'] = self.gemini_api_key_var.get()
-                    provider_config['gemini_temperature'] = self.gemini_temperature_var.get()
-                    provider_config['gemini_top_p'] = self.gemini_top_p_var.get()
-                    provider_config['gemini_top_k'] = self.gemini_top_k_var.get()
-                elif selected_provider == "OpenAI":
-                    provider_config['openai_api_key'] = self.openai_api_key_var.get()
-                    provider_config['openai_model'] = self.openai_model_var.get()
-                elif selected_provider == "Anthropic":
-                    provider_config['anthropic_api_key'] = self.anthropic_api_key_var.get()
-                    provider_config['anthropic_model'] = self.anthropic_model_var.get()
-                elif selected_provider == "DeepSeek":
-                    provider_config['deepseek_api_key'] = self.deepseek_api_key_var.get()
-                    # DeepSeek model is fixed
 
                 translated_segments = translate_text(
-                    provider_config, transcribed_segments, target_lang_val,
+                    provider_config_for_translation, transcribed_segments, target_lang_val,
                     self.log_status, batch_size
                 )
-                self.processed_file_data[video_file]['translated_segments'] = translated_segments
-                self.translated_segments = translated_segments
-                
-                if not translated_segments:
-                    self.log_status(f"--- Process Failed (Translation) for {os.path.basename(video_file)} ---")
-                    self.update_progress(f"Translation failed for {os.path.basename(video_file)}", is_error=True)
-                    self.processed_file_data[video_file]['status'] = 'Error_Translation'
+
+                if translated_segments is None: 
+                    self.log_status(f"Translation failed for {os.path.basename(video_file)} (provider: {selected_provider}).")
+                    self.update_progress(f"Translation error: {os.path.basename(video_file)}", is_error=True)
+                    self.processed_file_data[video_file]['status'] = 'Error_TranslationAPI' 
+                    if video_idx == (self.video_listbox.curselection()[0] if self.video_listbox.curselection() else -1):
+                        self.display_output(f"Translation failed for {os.path.basename(video_file)}.") 
+                        self.update_comparison_view() 
+                        self._load_segments_to_editor(None)
                     continue
 
-                # Translation successful, format output
+                self.processed_file_data[video_file]['translated_segments'] = translated_segments
+                self.log_status("Translation complete.")
+
                 output_format_val = self.output_format_var.get()
+                self.processed_file_data[video_file]['status'] = 'FormattingOutput'
                 self.update_progress(f"Formatting output ({output_format_val}) for {os.path.basename(video_file)}...")
-                self.log_status(f"Creating output in {output_format_val} for {os.path.basename(video_file)}...")
-                current_output_for_file = format_output(translated_segments, output_format_val)
-                self.processed_file_data[video_file]['output_content'] = current_output_for_file
-                self.current_output = current_output_for_file
-                
-                if video_idx == self.video_listbox.curselection()[0] if self.video_listbox.curselection() else False:
-                    self.display_output(current_output_for_file)
-                self.update_comparison_view()
-                
-                if self.auto_save_var.get() == "On":
-                    self.update_progress(f"Auto-saving output for {os.path.basename(video_file)}...")
-                    base, _ = os.path.splitext(video_file)
-                    auto_save_path = f"{base}.{output_format_val}"
+                self.log_status(f"Formatting output for {os.path.basename(video_file)} in {output_format_val}...")
+
+                output_content = format_output(translated_segments, output_format_val)
+                self.processed_file_data[video_file]['output_content'] = output_content
+
+                if video_idx == (self.video_listbox.curselection()[0] if self.video_listbox.curselection() else -1):
+                    self.transcribed_segments = transcribed_segments 
+                    self.translated_segments = translated_segments   
+                    self.current_output = output_content             
+                    self.display_output(self.current_output)
+                    self.update_comparison_view()
+                    self._load_segments_to_editor(self.translated_segments)
+
+
+                if self.auto_save_var.get() == "On": 
+                    base_name, _ = os.path.splitext(video_file)
+                    auto_save_path = f"{base_name}.{output_format_val}" 
                     try:
-                        with open(auto_save_path, 'w', encoding='utf-8') as f:
-                            f.write(current_output_for_file)
-                        self.log_status(f"Auto-saved: {auto_save_path}")
+                        with open(auto_save_path, "w", encoding="utf-8") as f:
+                            f.write(output_content)
+                        self.log_status(f"Auto-saved subtitle to {auto_save_path}")
                     except Exception as e_save:
                         self.log_status(f"Error auto-saving {auto_save_path}: {e_save}")
                 
@@ -999,19 +1153,16 @@ class AppGUI:
                 self.update_progress(f"Completed: {os.path.basename(video_file)}", is_complete=True)
                 self.processed_file_data[video_file]['status'] = 'Done'
             
-            except Exception as e:  # Catch-all for the current video file processing
+            except Exception as e:
                 error_msg = str(e)
                 self.log_status(f"Unhandled error processing {os.path.basename(video_file)}: {error_msg}")
                 messagebox.showerror("Processing Error", f"An unexpected error occurred with {os.path.basename(video_file)}: {error_msg}")
-                self.processed_file_data.setdefault(video_file, {})  # Ensure dict entry exists
+                self.processed_file_data.setdefault(video_file, {})
                 if not self.processed_file_data[video_file].get('status', '').startswith('Error_'):
                     self.processed_file_data[video_file]['status'] = 'Error_Generic'
-                # If it was already an Error_Config, Error_FileNotFound etc., it remains that.
             
-            finally:  # This finally block executes for each video file in the loop
-                # Update listbox with the final status for this item
+            finally:
                 final_status = self.processed_file_data.get(video_file, {}).get('status', 'Error_Unknown')
-                # Check if item still exists in listbox (it might if error was before listbox update)
                 if video_idx < self.video_listbox.size() and self.video_listbox.get(video_idx).startswith("[Processing]"):
                     self.video_listbox.delete(video_idx)
                     self.video_listbox.insert(video_idx, f"[{final_status}] {os.path.basename(video_file)}")
@@ -1070,6 +1221,16 @@ class AppGUI:
         temp_subtitle_path = ""
 
         try:
+            # Check if we need to apply styling
+            if output_format == "srt" and file_data.get('subtitle_style'):
+                # Only SRT and VTT support styling - for now just implement SRT
+                self.log_status(f"Applying subtitle styling for preview")
+                style = file_data['subtitle_style']
+                
+                # Apply style to the SRT content
+                styled_output = self._apply_style_to_srt(current_output_for_preview, style)
+                current_output_for_preview = styled_output
+            
             with tempfile.NamedTemporaryFile(mode="w", suffix=f".{output_format}", delete=False, encoding='utf-8') as tmp_file:
                 tmp_file.write(current_output_for_preview)
                 temp_subtitle_path = tmp_file.name
@@ -1108,7 +1269,80 @@ class AppGUI:
         finally:
             if temp_subtitle_path and os.path.exists(temp_subtitle_path):
                  self.log_status(f"Note: Temp subtitle {os.path.basename(temp_subtitle_path)} for {os.path.basename(video_path)} may need cleanup.")
-                 pass 
+                 pass
+    
+    def _apply_style_to_srt(self, srt_content, style):
+        """Apply styling to SRT content."""
+        try:
+            font = style.get('font', 'Arial')
+            color = style.get('color', 'white')
+            size = style.get('size', '16')
+            position = style.get('position', 'bottom')
+            outline_color = style.get('outline_color', 'black')
+            outline_width = style.get('outline_width', '1')
+            bg_color = style.get('bg_color', 'transparent')
+            bg_opacity = style.get('bg_opacity', '0')
+            
+            # Format position value
+            position_value = "10,10"  # Default (top left)
+            if position == "bottom":
+                position_value = "10,10,10,bottom"
+            elif position == "top":
+                position_value = "10,10,10,top"
+            elif position == "middle":
+                position_value = "10,10,10,middle"
+            
+            # Format background opacity (0-100 to 0-255)
+            bg_opacity_value = int(int(bg_opacity) * 255 / 100) if bg_opacity != '0' else 0
+            
+            # Format SRT styling
+            # Format: <font face="Font Name" size="12" color="#RRGGBB">Text</font>
+            styled_lines = []
+            
+            # Regular expression to match SRT entries (number, timestamps, text)
+            srt_pattern = re.compile(r'(\d+)\r?\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\r?\n((?:.+\r?\n?)+)')
+            
+            # Apply styles to each subtitle entry
+            position_in_text = 0
+            for match in srt_pattern.finditer(srt_content):
+                num, start, end, text = match.groups()
+                
+                # Apply styling to text - keeping line breaks within the font tag
+                styled_text = text
+                
+                # Apply styling based on format
+                # Basic SRT styling
+                font_tag = f'<font face="{font}" size="{size}" color="{color}"'
+                
+                # Add outline if specified
+                if outline_width != '0':
+                    font_tag += f' outline="{outline_width}" outline-color="{outline_color}"'
+                
+                # Add background if not transparent
+                if bg_color != 'transparent' and bg_opacity != '0':
+                    bg_color_hex = bg_color  # Need to convert named colors to hex
+                    font_tag += f' back-color="{bg_color_hex}" back-opacity="{bg_opacity_value}"'
+                
+                font_tag += '>'
+                
+                # Wrap text in styled font tag
+                styled_text = f"{font_tag}{text}</font>"
+                
+                # Replace the original text with styled text
+                styled_entry = f"{num}\n{start} --> {end}\n{styled_text}\n"
+                styled_lines.append(styled_entry)
+                
+                position_in_text = match.end()
+            
+            # Append any remaining text after the last match
+            if position_in_text < len(srt_content):
+                styled_lines.append(srt_content[position_in_text:])
+            
+            return "\n".join(styled_lines)
+        
+        except Exception as e:
+            self.log_status(f"Error applying style to SRT: {e}", level="ERROR")
+            return srt_content  # Return original content on error
 
     def _format_timestamp(self, seconds):
         """Helper to format seconds to HH:MM:SS,ms or MM:SS,ms if hours are zero."""
@@ -1277,6 +1511,7 @@ class AppGUI:
             'settings': {
                 'translation_provider': self.translation_provider_var.get(),
                 'gemini_api_key': self.gemini_api_key_var.get(),
+                'gemini_model': self.gemini_model_var.get(), # Add gemini_model to project save
                 'openai_api_key': self.openai_api_key_var.get(),
                 'openai_model': self.openai_model_var.get(),
                 'anthropic_api_key': self.anthropic_api_key_var.get(),
@@ -1295,7 +1530,15 @@ class AppGUI:
                 'gemini_temperature': self.gemini_temperature_var.get(),
                 'gemini_top_p': self.gemini_top_p_var.get(),
                 'gemini_top_k': self.gemini_top_k_var.get(),
-                'extensive_logging': self.extensive_logging_var.get()
+                'extensive_logging': self.extensive_logging_var.get(),
+                'subtitle_font': self.subtitle_font_var.get(),
+                'subtitle_color': self.subtitle_color_var.get(),
+                'subtitle_size': self.subtitle_size_var.get(),
+                'subtitle_position': self.subtitle_position_var.get(),
+                'subtitle_outline_color': self.subtitle_outline_color_var.get(),
+                'subtitle_outline_width': self.subtitle_outline_width_var.get(),
+                'subtitle_bg_color': self.subtitle_bg_color_var.get(),
+                'subtitle_bg_opacity': self.subtitle_bg_opacity_var.get()
             }
         }
         return project_data
@@ -1400,6 +1643,7 @@ class AppGUI:
             self.openai_model_var.set(settings.get('openai_model', defaults.get('openai_model', OPENAI_MODELS[0] if OPENAI_MODELS else '')))
             self.anthropic_api_key_var.set(settings.get('anthropic_api_key', defaults['anthropic_api_key']))
             self.anthropic_model_var.set(settings.get('anthropic_model', defaults['anthropic_model']))
+            self.gemini_model_var.set(settings.get('gemini_model', defaults.get('gemini_model', GEMINI_MODELS[0] if GEMINI_MODELS else ''))) # Restore gemini_model
             self.deepseek_api_key_var.set(settings.get('deepseek_api_key', defaults['deepseek_api_key']))
             
             self.target_language.set(settings.get('target_language', defaults['target_language']))
@@ -1508,67 +1752,190 @@ class AppGUI:
         self.stat_failed_files.set(f"Failed: {failed}") 
 
     def _update_translation_settings_ui(self, event=None):
-        """Dynamically update translation settings UI based on selected provider."""
-        # Clear previous provider-specific widgets
+        """Update the translation settings UI based on the selected provider."""
+        # Clear previous provider settings
         for widget in self.provider_details_frame.winfo_children():
             widget.destroy()
 
         provider = self.translation_provider_var.get()
         
-        # Common width for API key entries and model comboboxes
-        api_key_width = 30 
-        model_combo_width = 28
-
         if provider == "Gemini":
-            gemini_frame = ttk.Frame(self.provider_details_frame)
-            gemini_frame.pack(fill=tk.X, pady=2)
-            ttk.Label(gemini_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Entry(gemini_frame, textvariable=self.gemini_api_key_var, width=api_key_width, show="*").pack(side=tk.LEFT, fill=tk.X, expand=True)
-            # Gemini specific params (temperature, top_p, top_k) are in Advanced Settings dialog for now.
-
+            # API key field
+            key_frame = ttk.Frame(self.provider_details_frame)
+            key_frame.pack(fill=tk.X, pady=3)
+            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
+            ttk.Entry(key_frame, textvariable=self.gemini_api_key_var, width=40, show="•").pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+            
+            # Model field - changed to Combobox
+            model_frame = ttk.Frame(self.provider_details_frame)
+            model_frame.pack(fill=tk.X, pady=3)
+            ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT, padx=(0,5))
+            # ttk.Label(model_frame, text="gemini-2.5-flash-preview-04-17", width=25).pack(side=tk.LEFT, padx=5) # Old label
+            ttk.Combobox(model_frame, textvariable=self.gemini_model_var, values=GEMINI_MODELS, state="readonly", width=25).pack(side=tk.LEFT, padx=5)
+            
         elif provider == "OpenAI":
-            openai_frame = ttk.Frame(self.provider_details_frame)
-            openai_frame.pack(fill=tk.X, pady=2)
-            
-            key_frame = ttk.Frame(openai_frame)
-            key_frame.pack(fill=tk.X, pady=(0,3))
+            # API key field
+            key_frame = ttk.Frame(self.provider_details_frame)
+            key_frame.pack(fill=tk.X, pady=3)
             ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Entry(key_frame, textvariable=self.openai_api_key_var, width=api_key_width, show="*").pack(side=tk.LEFT, fill=tk.X, expand=True)
+            ttk.Entry(key_frame, textvariable=self.openai_api_key_var, width=40, show="•").pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
             
-            model_frame = ttk.Frame(openai_frame)
-            model_frame.pack(fill=tk.X)
+            # Model dropdown
+            model_frame = ttk.Frame(self.provider_details_frame)
+            model_frame.pack(fill=tk.X, pady=3)
             ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Combobox(
-                model_frame, 
-                textvariable=self.openai_model_var, 
-                values=OPENAI_MODELS, 
-                state="readonly", 
-                width=model_combo_width
-            ).pack(side=tk.LEFT)
-
+            ttk.Combobox(model_frame, textvariable=self.openai_model_var, values=OPENAI_MODELS, state="readonly", width=25).pack(side=tk.LEFT, padx=5)
+            
         elif provider == "Anthropic":
-            anthropic_frame = ttk.Frame(self.provider_details_frame)
-            anthropic_frame.pack(fill=tk.X, pady=2)
-
-            key_frame = ttk.Frame(anthropic_frame)
-            key_frame.pack(fill=tk.X, pady=(0,3))
+            # API key field
+            key_frame = ttk.Frame(self.provider_details_frame)
+            key_frame.pack(fill=tk.X, pady=3)
             ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Entry(key_frame, textvariable=self.anthropic_api_key_var, width=api_key_width, show="*").pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-            model_frame = ttk.Frame(anthropic_frame)
-            model_frame.pack(fill=tk.X)
+            ttk.Entry(key_frame, textvariable=self.anthropic_api_key_var, width=40, show="•").pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+            
+            # Model dropdown
+            model_frame = ttk.Frame(self.provider_details_frame)
+            model_frame.pack(fill=tk.X, pady=3)
             ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Combobox(
-                model_frame, 
-                textvariable=self.anthropic_model_var, 
-                values=ANTHROPIC_MODELS, 
-                state="readonly", 
-                width=model_combo_width
-            ).pack(side=tk.LEFT)
+            ttk.Combobox(model_frame, textvariable=self.anthropic_model_var, values=ANTHROPIC_MODELS, state="readonly", width=25).pack(side=tk.LEFT, padx=5)
             
         elif provider == "DeepSeek":
-            deepseek_frame = ttk.Frame(self.provider_details_frame)
-            deepseek_frame.pack(fill=tk.X, pady=2)
-            ttk.Label(deepseek_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Entry(deepseek_frame, textvariable=self.deepseek_api_key_var, width=api_key_width, show="*").pack(side=tk.LEFT, fill=tk.X, expand=True)
-            # DeepSeek model is fixed (DEEPSEEK_MODEL from config), so no model selection here.
+            # API key field
+            key_frame = ttk.Frame(self.provider_details_frame)
+            key_frame.pack(fill=tk.X, pady=3)
+            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
+            ttk.Entry(key_frame, textvariable=self.deepseek_api_key_var, width=40, show="•").pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+            
+            # Model field (non-editable as only one model is supported currently)
+            model_frame = ttk.Frame(self.provider_details_frame)
+            model_frame.pack(fill=tk.X, pady=3)
+            ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT, padx=(0,5))
+            ttk.Label(model_frame, text=DEEPSEEK_MODEL, width=25).pack(side=tk.LEFT, padx=5)
+    
+    def update_subtitle_preview(self, event=None):
+        """Update the subtitle preview canvas based on current style settings."""
+        try:
+            # Get values from style settings
+            font_name = self.subtitle_font_var.get()
+            font_size = int(self.subtitle_size_var.get())
+            text_color = self.subtitle_color_var.get()
+            position = self.subtitle_position_var.get()
+            outline_width = int(self.subtitle_outline_width_var.get())
+            outline_color = self.subtitle_outline_color_var.get()
+            bg_color = self.subtitle_bg_color_var.get()
+            bg_opacity = int(self.subtitle_bg_opacity_var.get())
+            
+            # Calculate position coordinates
+            canvas_width = self.preview_canvas.winfo_width() or 300  # Default to 300 if not yet drawn
+            canvas_height = self.preview_canvas.winfo_height() or 100  # Default to 100 if not yet drawn
+            
+            # Center horizontally (always use center of canvas)
+            x_pos = canvas_width / 2
+            
+            # Position vertically based on selection
+            if position == "top":
+                y_pos = canvas_height * 0.25
+            elif position == "middle":
+                y_pos = canvas_height * 0.5
+            else:  # bottom (default)
+                y_pos = canvas_height * 0.75
+            
+            # Clear canvas
+            self.preview_canvas.delete("all")
+            
+            # Sample text
+            preview_text = "Sample Subtitle Text"
+            
+            # Create background if not transparent
+            if bg_color != "transparent" and bg_opacity > 0:
+                # Create rectangle behind text
+                text_width = len(preview_text) * font_size * 0.6  # Approximate width
+                text_height = font_size * 1.5  # Approximate height
+                
+                self.preview_canvas.create_rectangle(
+                    x_pos - text_width/2 - 10, 
+                    y_pos - text_height/2 - 5,
+                    x_pos + text_width/2 + 10, 
+                    y_pos + text_height/2 + 5,
+                    fill=bg_color, 
+                    stipple='gray50' if bg_opacity < 100 else '',
+                    outline=""
+                )
+            
+            # Set up font
+            font = (font_name, font_size, "bold" if outline_width > 0 else "normal")
+            
+            # Create text with outline (if outline width > 0)
+            if outline_width > 0:
+                # Create multiple offset text items to simulate outline
+                offset = outline_width
+                for dx, dy in [(-offset, -offset), (-offset, offset), (offset, -offset), (offset, offset),
+                              (-offset, 0), (offset, 0), (0, -offset), (0, offset)]:
+                    self.preview_canvas.create_text(
+                        x_pos + dx, y_pos + dy, 
+                        text=preview_text, 
+                        fill=outline_color, 
+                        font=font,
+                        anchor="center"
+                    )
+            
+            # Create main text on top
+            self.preview_text_id = self.preview_canvas.create_text(
+                x_pos, y_pos, 
+                text=preview_text, 
+                fill=text_color, 
+                font=font,
+                anchor="center"
+            )
+            
+            self.log_status(f"Updated subtitle preview with: {font_name}, size {font_size}, color {text_color}")
+        except Exception as e:
+            self.log_status(f"Error updating subtitle preview: {e}", level="ERROR")
+    
+    def apply_subtitle_style(self):
+        """Apply the current subtitle style settings to the output."""
+        try:
+            # Get the currently selected video
+            selected_indices = self.video_listbox.curselection()
+            if not selected_indices:
+                messagebox.showinfo("Info", "Please select a video from the queue.")
+                return
+                
+            raw_listbox_item = self.video_listbox.get(selected_indices[0])
+            filepath_basename = raw_listbox_item.split("] ", 1)[1] if "]" in raw_listbox_item else raw_listbox_item
+            actual_filepath = next((fp for fp in self.video_queue if os.path.basename(fp) == filepath_basename), None)
+            
+            if not actual_filepath or not os.path.exists(actual_filepath):
+                messagebox.showinfo("Error", "Cannot find the selected video file.")
+                return
+                
+            # Check if the video has been processed
+            file_data = self.processed_file_data.get(actual_filepath)
+            if not file_data or not file_data.get('output_content'):
+                messagebox.showinfo("Info", "Please process the video first to generate subtitles.")
+                return
+                
+            # Save the style settings to the file data for future reference/exports
+            file_data['subtitle_style'] = {
+                'font': self.subtitle_font_var.get(),
+                'color': self.subtitle_color_var.get(),
+                'size': self.subtitle_size_var.get(),
+                'position': self.subtitle_position_var.get(),
+                'outline_color': self.subtitle_outline_color_var.get(),
+                'outline_width': self.subtitle_outline_width_var.get(),
+                'bg_color': self.subtitle_bg_color_var.get(),
+                'bg_opacity': self.subtitle_bg_opacity_var.get()
+            }
+            
+            # Update the processed_file_data with the updated style
+            self.processed_file_data[actual_filepath] = file_data
+            
+            # Show success message
+            messagebox.showinfo("Success", "Subtitle styling has been applied. Use 'Preview with Subtitles' to see the result.")
+            
+            # Save to config
+            self._save_config()
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to apply subtitle style: {e}")
+            self.log_status(f"Error applying subtitle style: {e}", level="ERROR")

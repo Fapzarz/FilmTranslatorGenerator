@@ -10,6 +10,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.5.0] - 2025-05-15
+
+### Added
+- **Multiple Gemini Models Support**: Added ability to choose between Gemini models:
+  - `gemini-2.5-flash-preview-04-17` (default): Optimized for faster response
+  - `gemini-2.5-pro-exp-03-25`: Higher quality for more complex translations
+- **Improved UI Layout**: Enhanced panel proportions and better subtitle style preview
+  - Adjusted left panel width for better visibility of controls
+  - Fixed subtitle style preview positioning to properly center text
+  - Added automatic repositioning on window resize for subtitle preview
+
+### Fixed
+- Indentation issues in `backend/translate.py` related to batch translation
+- Improved error handling for subtitle style preview
+- Fixed layout issues with queue panel display
+- Corrected configuration loading for subtitle styles
+
 ## [2.2.0] - 2025-05-12
 
 ### Added
@@ -126,6 +143,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [2.5.0] - 2025-05-15
+
+### Added
+- **Dukungan Berbagai Model Gemini**: Menambahkan kemampuan untuk memilih antara model Gemini:
+  - `gemini-2.5-flash-preview-04-17` (default): Direkayasa untuk respons yang lebih cepat
+  - `gemini-2.5-pro-exp-03-25`: Kualitas yang lebih tinggi untuk terjemahan yang lebih kompleks
+- **Peningkatan Tata Letak UI**: Peningkatan proporsi panel dan preview style subtitle yang lebih baik
+  - Lebar panel kiri disesuaikan untuk keterlihatan kontrol yang lebih baik
+  - Posisi preview style subtitle diperbaiki untuk menampilkan teks yang benar-benar berpusat
+  - Penambahan pemindahan otomatis pada ukuran jendela untuk preview subtitle
+
+### Fixed
+- Masalah indentasi di `backend/translate.py` yang berkaitan dengan terjemahan batch
+- Peningkatan penanganan error untuk preview style subtitle
+- Masalah layout dengan tampilan antrean
+- Pengaturan konfigurasi yang benar untuk style subtitle
 
 ## [2.2.0] - 2025-05-12
 
