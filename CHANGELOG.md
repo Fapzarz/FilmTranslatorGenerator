@@ -13,6 +13,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [3.0.0-ALPHA 1] - 2025-06-01
 
 ### Added
+- **Complete UI Framework Migration**: Rebuilt the entire application using PySide6 (Qt) framework, replacing the previous Tkinter implementation:
+  - Modern, responsive UI with better controls and layout capabilities
+  - Native look and feel across different platforms
+  - Improved video handling with proper hardware acceleration
+  - Support for more complex UI components and interactions
 - **Advanced Subtitle Editor Dialog**: Complete overhaul of the subtitle editing experience:
   - Large video player with direct playback controls
   - Millisecond precision timing controls
@@ -23,6 +28,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Undo/Redo functionality for all editing operations
 
 ### Changed
+- **Complete Architectural Overhaul**: Major refactoring of the application's architecture for the PySide6 migration:
+  - Reorganized code structure with clear separation between UI and logic
+  - Introduced dialog-based workflows for complex operations
+  - Redesigned managers system for better modularity
+  - Created new module structure with dedicated directories for dialogs and managers
 - **Enhanced Subtitle Display**: Replaced QLabel-based overlay with QGraphicsView architecture for more reliable subtitle rendering:
   - Subtitle text now consistently visible on top of video content in all environments
   - Maintains proper font size regardless of video scaling
@@ -190,7 +200,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Basic error handling.
 - API Key storage to `config.json` (initial version).
 - `.gitignore` file.
-- Initial `requirements.txt` file.
+- File `requirements.txt` awal.
 
 </details>
 
@@ -205,29 +215,39 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [3.0.0-ALPHA 1] - 2025-06-01
 
 ### Added
-- **Advanced Subtitle Editor Dialog**: Complete overhaul of the subtitle editing experience:
-  - Large video player with direct playback controls
-  - Millisecond precision timing controls
-  - Table view with all subtitle segments
-  - Real-time subtitle preview directly on video
-  - CPS (Characters Per Second) and CPL (Characters Per Line) readability indicators
-  - Improved styling options and preview
-  - Undo/Redo functionality for all editing operations
+- **Migrasi Framework UI Lengkap**: Membangun ulang seluruh aplikasi menggunakan framework PySide6 (Qt), menggantikan implementasi Tkinter sebelumnya:
+  - UI modern dan responsif dengan kontrol dan kemampuan tata letak yang lebih baik
+  - Tampilan dan nuansa yang native di berbagai platform
+  - Penanganan video yang ditingkatkan dengan akselerasi hardware yang tepat
+  - Dukungan untuk komponen dan interaksi UI yang lebih kompleks
+- **Dialog Editor Subtitle Lanjutan**: Perombakan lengkap pengalaman pengeditan subtitle:
+  - Pemutar video besar dengan kontrol pemutaran langsung
+  - Kontrol timing dengan presisi milidetik
+  - Tampilan tabel dengan semua segmen subtitle
+  - Pratinjau subtitle real-time langsung pada video
+  - Indikator keterbacaan CPS (Characters Per Second) dan CPL (Characters Per Line)
+  - Opsi dan pratinjau gaya yang ditingkatkan
+  - Fungsi Undo/Redo untuk semua operasi pengeditan
 
 ### Changed
-- **Enhanced Subtitle Display**: Replaced QLabel-based overlay with QGraphicsView architecture for more reliable subtitle rendering:
-  - Subtitle text now consistently visible on top of video content in all environments
-  - Maintains proper font size regardless of video scaling
-  - Automatic adjustment of subtitle position and style during playback
-  - Proper word-wrapping and alignment for multi-line subtitles
-- **Main UI Simplification**: Removed embedded video player from main window, replaced with dedicated advanced editor dialog
-- **Improved Code Structure**: Further modularized subtitle editing and display code
+- **Perombakan Arsitektur Lengkap**: Refaktorisasi besar pada arsitektur aplikasi untuk migrasi PySide6:
+  - Struktur kode yang diorganisir ulang dengan pemisahan yang jelas antara UI dan logika
+  - Memperkenalkan alur kerja berbasis dialog untuk operasi kompleks
+  - Mendesain ulang sistem manajer untuk modularitas yang lebih baik
+  - Membuat struktur modul baru dengan direktori khusus untuk dialog dan manajer
+- **Peningkatan Tampilan Subtitle**: Menggantikan overlay berbasis QLabel dengan arsitektur QGraphicsView untuk rendering subtitle yang lebih andal:
+  - Teks subtitle sekarang konsisten terlihat di atas konten video di semua lingkungan
+  - Mempertahankan ukuran font yang tepat terlepas dari penskalaan video
+  - Penyesuaian otomatis posisi dan gaya subtitle selama pemutaran
+  - Pemotongan kata dan perataan yang tepat untuk subtitle multi-baris
+- **Penyederhanaan UI Utama**: Menghapus pemutar video yang tertanam dari jendela utama, digantikan dengan dialog editor lanjutan khusus
+- **Peningkatan Struktur Kode**: Modularisasi lebih lanjut pada kode pengeditan dan tampilan subtitle
 
 ### Fixed
-- Video player control issues where playback controls were occasionally unresponsive
-- Audio continuing to play after closing the editor dialog
-- Subtitle overlay display issues on different platforms
-- Layout problems with the video control panel
+- Masalah kontrol pemutar video di mana kontrol pemutaran terkadang tidak responsif
+- Audio yang terus memutar setelah menutup dialog editor
+- Masalah tampilan overlay subtitle di berbagai platform
+- Masalah tata letak dengan panel kontrol video
 
 ## [2.5.10] - 2025-05-20
 
