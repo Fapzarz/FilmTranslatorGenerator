@@ -1,147 +1,147 @@
+import os
 import tkinter as tk
 from tkinter import messagebox
-import re
-import os # Might be needed if any path operations occur, good to have if app methods use it.
 
 from utils.format import format_output # For apply_editor_changes
+from gui import subtitle_styler # Corrected: Import the subtitle_styler module from gui
 
 # Note: 'app' in these functions refers to the instance of AppGUI
 
 def load_segments_to_editor(app, segments):
-    """Formats and loads subtitle segments into the editor text widget.
-    'app' is the AppGUI instance.
-    'segments' is the list of subtitle segments.
-    """
-    editor = app.text_widgets['editor_text']
-    editor.configure(state='normal')
-    editor.delete(1.0, tk.END)
+    """Loads subtitle segments into the editor text widget."""
+    if not hasattr(app, 'text_widgets') or 'editor' not in app.text_widgets:
+        app.log_status("Editor: Editor widget not found, cannot load segments.", "ERROR")
+        return
 
     if not segments:
-        editor.insert(tk.END, "No subtitle segments to display or edit.")
-        # State will be set to disabled by the calling context if needed (e.g., on_video_select)
+        app.log_status("Editor: No segments to load into editor.", "VERBOSE")
+        editor = app.text_widgets['editor']
+        editor.configure(state='normal')
+        editor.delete(1.0, tk.END)
+        editor.configure(state='disabled')
         return
 
+    editor_content = ""
     for i, segment in enumerate(segments):
-        start_time_val = segment.get('start')
-        end_time_val = segment.get('end')
-        # _format_timestamp is a method of AppGUI, so call it via app instance
-        start_time = app._format_timestamp(start_time_val) 
-        end_time = app._format_timestamp(end_time_val)
-        text = segment.get('text', '').strip()
-        
-        editor.insert(tk.END, f"Segment: {i+1}\n")
-        editor.insert(tk.END, f"Time: {start_time} --> {end_time}\n")
-        editor.insert(tk.END, f"Text: {text}\n\n")
+        start_time = app._format_timestamp(segment['start']) # Use app instance for _format_timestamp
+        end_time = app._format_timestamp(segment['end'])
+        text = segment['text'].strip() # Ensure text is stripped
+        editor_content += f"{i+1}\\n{start_time} --> {end_time}\\n{text}\\n\\n"
+
+    editor = app.text_widgets['editor']
+    editor.configure(state='normal')
+    editor.delete(1.0, tk.END)
+    editor.insert(tk.END, editor_content)
+    # Do not disable here if we want it to be immediately editable
+    # editor.configure(state='disabled') 
+    app.log_status("Segments loaded into editor.", "INFO")
+
+def save_editor_changes(app):
+    """Saves the changes from the subtitle editor back to the app.translated_segments."""
+    if not hasattr(app, 'text_widgets') or 'editor' not in app.text_widgets:
+        app.log_status("Editor: Editor widget not found, cannot save changes.", "ERROR")
+        return
     
-    # The editor state (normal/disabled) should be managed by the calling function
-    # based on whether there are segments and if editing is allowed.
+    editor = app.text_widgets['editor']
+    content = editor.get(1.0, tk.END).strip()
+    
+    if not app.translated_segments: # Should ideally have original segments to map to
+        app.log_status("Editor: Original translated segments not found. Cannot map changes.", "ERROR")
+        messagebox.showerror("Save Error", "Cannot save changes: original segment data is missing.")
+        return
 
-
-def parse_edited_text_to_segments(app, edited_text_content):
-    """Parses the content from the editor back into a list of segment dictionaries.
-    'app' is the AppGUI instance (for logging).
-    """
     new_segments = []
-    segment_pattern = re.compile(r"Segment: (\d+)\s*Time: ([\d:,]+) --> ([\d:,]+)\s*Text: (.*?)(?=\nSegment: |\Z)", re.DOTALL | re.MULTILINE)
-    time_regex = re.compile(r"(?:(\d{1,2}):)?(\d{1,2}):(\d{1,2}),(\d{1,3})")
+    lines = content.split('\\n\\n') # Split by double newline
+    
+    original_segment_count = len(app.translated_segments)
+    parsed_segment_count = 0
 
-    def parse_time(ts_str): # Inner helper function
-        match = time_regex.fullmatch(ts_str.strip())
-        if not match:
-            app.log_status(f"Warning: Could not parse timestamp string: '{ts_str}'")
-            return None
+    for block in lines:
+        if not block.strip():
+            continue
         
-        groups = match.groups()
-        hours = int(groups[0]) if groups[0] else 0
-        minutes = int(groups[1])
-        seconds = int(groups[2])
-        ms = int(groups[3])
-        return hours * 3600 + minutes * 60 + seconds + ms / 1000.0
-
-    for match in segment_pattern.finditer(edited_text_content):
+        parts = block.strip().split('\\n')
+        if len(parts) < 3:
+            app.log_status(f"Editor: Skipping malformed block: {parts}", "WARNING")
+            continue
+            
         try:
-            num_str, start_str, end_str, text_content = match.groups()
-            
-            start_time = parse_time(start_str)
-            end_time = parse_time(end_str)
-            text = text_content.strip()
-            
-            if start_time is None or end_time is None:
-                app.log_status(f"Skipping segment {num_str} due to time parsing error.")
-                continue
-            
-            if start_time > end_time:
-                app.log_status(f"Warning: Segment {num_str} start time ({start_str}) is after end time ({end_str}). Adjusting end time.")
-                end_time = start_time 
+            # segment_index = int(parts[0].strip()) -1 # Assuming 1-based index in editor
+            # We should rely on order rather than index from text, to handle deletions/additions better.
+            # For now, let's assume a direct mapping and replacement based on order.
+            # A more robust solution would involve proper segment ID management or diffing.
 
-            new_segments.append({'start': start_time, 'end': end_time, 'text': text})
-        except Exception as e:
-            app.log_status(f"Error parsing segment block (Num: {match.group(1) if match else 'N/A'}). Error: {e}")
-            continue 
+            # Re-parse timestamps (SRT format) - this is simplified and might need more robust parsing
+            # Example: 00:00:21,490 --> 00:00:22,830
+            time_parts = parts[1].split('-->')
+            # For simplicity, we are taking the text and assuming the original start/end times remain
+            # This means the editor currently only allows text modification, not timing.
+            # If timing can be edited, this parsing logic needs to be much more robust.
             
-    return new_segments
+            # Find corresponding original segment by order
+            if parsed_segment_count < original_segment_count:
+                original_segment = app.translated_segments[parsed_segment_count]
+                new_text = '\\n'.join(parts[2:]).strip() # Join remaining lines as text
+                
+                new_segments.append({
+                    'start': original_segment['start'], # Keep original timing
+                    'end': original_segment['end'],     # Keep original timing
+                    'text': new_text
+                })
+                parsed_segment_count += 1
+            else:
+                app.log_status(f"Editor: Extra segment data found in editor beyond original count: {' '.join(parts)}", "WARNING")
+                # Optionally, allow adding new segments if supported
+                # For now, we only update existing ones by order.
 
-def apply_editor_changes(app):
-    """Applies changes from the subtitle editor to the current video's data.
-    'app' is the AppGUI instance.
-    """
+        except ValueError as e:
+            app.log_status(f"Editor: Error parsing segment block: {parts}. Error: {e}", "ERROR")
+            messagebox.showerror("Parse Error", f"Error parsing edited segment: {parts[0] if parts else 'Unknown'}. Please check format.")
+            return # Stop processing on error
+
+    if parsed_segment_count == 0 and content: # Content was there but nothing parsed
+        messagebox.showerror("Save Error", "Could not parse any segments from the editor. Please check the format (ID\\nTIMESTAMPS\\nTEXT\\n\\n...).")
+        return
+        
+    # Update app's translated_segments
+    app.translated_segments = new_segments
+    
+    # Re-format the output for the main output tab
+    output_format_to_use = app.output_format_var.get() # Get current output format
+    formatted_output = format_output(app.translated_segments, output_format_to_use, app._format_timestamp) # Use app instance for _format_timestamp
+
+    # Update the processed_file_data for the currently selected video
+    current_video_path = None
     selected_indices = app.video_listbox.curselection()
-    if not selected_indices:
-        messagebox.showerror("Error", "No video selected in the queue to apply changes to.")
-        return
+    if selected_indices:
+        listbox_index = selected_indices[0]
+        if listbox_index < len(app.video_queue):
+            current_video_path = app.video_queue[listbox_index]
 
-    # Ensure video_queue is not empty and index is valid
-    if not app.video_queue or selected_indices[0] >= len(app.video_queue):
-        messagebox.showerror("Error", "Selected video index is out of bounds.")
-        return
-    current_video_path = app.video_queue[selected_indices[0]]
-    
-    if not current_video_path or current_video_path not in app.processed_file_data:
-        messagebox.showerror("Error", "Selected video data not found.")
-        return
-    
-    file_data = app.processed_file_data[current_video_path]
-    if not file_data.get('translated_segments'): 
-        messagebox.showinfo("Info", "No translation data exists for this video to edit.")
-        return
-
-    editor_content = app.text_widgets['editor_text'].get(1.0, tk.END)
-    edited_segments = [] # Default to empty list
-
-    if not editor_content.strip():
-        if messagebox.askyesno("Confirm Clear Subtitles", "Editor is empty. Do you want to remove all subtitles for this item?"):
-            pass # edited_segments is already []
+    # Update the main output tab and processed_file_data
+    if current_video_path:
+        file_data = app.processed_file_data.get(current_video_path)
+        if file_data:
+            file_data['translated_segments'] = app.translated_segments # Update segments
+            # Apply styling if SRT format and style exists
+            if output_format_to_use == "srt" and file_data.get('subtitle_style'):
+                styled_output = subtitle_styler.format_srt_with_style(app, formatted_output, file_data['subtitle_style'])
+                app.display_output(styled_output)
+                file_data['output_content'] = styled_output
+            else:
+                app.display_output(formatted_output)
+                file_data['output_content'] = formatted_output
         else:
-            return # User cancelled clearing
+            # This case should ideally not happen if a video is selected and processed
+            app.display_output(formatted_output) 
     else:
-        try:
-            edited_segments = parse_edited_text_to_segments(app, editor_content) # Call the local function
-            if not edited_segments and editor_content.strip(): 
-                messagebox.showwarning("Parsing Error", "Could not parse any segments from the editor. Check format. Changes not applied.")
-                return
-        except Exception as e_parse:
-            app.log_status(f"Critical error parsing editor content: {e_parse}", level="ERROR")
-            messagebox.showerror("Parsing Error", f"Failed to parse editor content: {e_parse}. Changes not applied.")
-            return
-    
-    file_data['translated_segments'] = edited_segments
-    
-    # Update AppGUI instance variables if this is the currently selected and displayed item
-    # This ensures the main app object has the latest data for comparison view, etc.
-    if app.selected_video_in_queue.get() == current_video_path: 
-         app.translated_segments = edited_segments
+        # No video selected, just update the main output display (though this is less likely context for editor save)
+        app.display_output(formatted_output)
 
-    output_format_val = app.output_format_var.get()
-    new_output_content = format_output(edited_segments, output_format_val) # from utils.format
-    file_data['output_content'] = new_output_content
+    app.log_status("Subtitle changes applied from editor.", "INFO")
+    if current_video_path :
+      messagebox.showinfo("Changes Applied", f"Subtitle changes for {os.path.basename(current_video_path)} have been applied. You can save the updated subtitle file or save the project.")
     
-    if app.selected_video_in_queue.get() == current_video_path: 
-        app.current_output = new_output_content
-        app.display_output(new_output_content)
-        app.update_comparison_view()
-        # Optionally, reload the editor to show the cleaned/parsed version
-        load_segments_to_editor(app, edited_segments) 
-    
-    app.log_status(f"Changes applied to subtitles for {os.path.basename(current_video_path)}. Save via 'Save Output' or project save.")
-    messagebox.showinfo("Changes Applied", f"Subtitle changes for {os.path.basename(current_video_path)} have been applied. You can save the updated subtitle file or save the project.")
-    app.text_widgets['editor_text'].configure(state='normal') 
+    # Keep editor enabled for further edits
+    if hasattr(app, 'text_widgets') and 'editor' in app.text_widgets:
+        app.text_widgets['editor'].configure(state='normal')

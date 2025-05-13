@@ -15,6 +15,82 @@ from config import (
 # Placeholder for API key storage/retrieval if not passed directly
 # For now, API keys are expected to be passed in provider_config
 
+# --- API Key Validation Functions ---
+
+def validate_gemini_key(api_key, status_callback):
+    """Validates the Gemini API key by trying to list models."""
+    if not api_key:
+        return False, "API Key is empty."
+    try:
+        genai.configure(api_key=api_key)
+        models = [m.name for m in genai.list_models()]
+        if not models: # Should ideally return some models
+            return False, "Key configured, but no models found (check permissions/key)."
+        status_callback("Gemini API Key appears valid (models listed).", "VERBOSE")
+        return True, "Valid"
+    except Exception as e:
+        error_message = f"Gemini Key Validation Error: {str(e)}"
+        status_callback(error_message, "ERROR")
+        # More specific error checking can be added here if needed
+        if "API_KEY_INVALID" in str(e) or "PERMISSION_DENIED" in str(e) or "authentication" in str(e).lower():
+            return False, "Invalid API Key."
+        return False, f"Validation Error: {str(e)[:100]}" # Truncate long errors
+
+def validate_openai_key(api_key, status_callback):
+    """Validates the OpenAI API key by trying to list models."""
+    if not api_key:
+        return False, "API Key is empty."
+    try:
+        client = openai.OpenAI(api_key=api_key)
+        client.models.list() # This call will fail if the key is invalid
+        status_callback("OpenAI API Key appears valid (models listed).", "VERBOSE")
+        return True, "Valid"
+    except openai.AuthenticationError:
+        status_callback("OpenAI AuthenticationError: Invalid API Key.", "ERROR")
+        return False, "Invalid API Key."
+    except openai.APIConnectionError as e:
+        status_callback(f"OpenAI APIConnectionError: {e}", "ERROR")
+        return False, "Connection Error."
+    except openai.RateLimitError as e:
+        status_callback(f"OpenAI RateLimitError: {e}", "ERROR")
+        return False, "Rate Limit Exceeded." # Key might be valid but hitting limits
+    except openai.APIError as e: # Catch other OpenAI API errors
+        status_callback(f"OpenAI APIError: {e}", "ERROR")
+        return False, f"API Error: {str(e)[:100]}"
+    except Exception as e: # Catch any other unexpected errors
+        error_message = f"OpenAI Key Validation Error: {str(e)}"
+        status_callback(error_message, "ERROR")
+        return False, f"Validation Error: {str(e)[:100]}"
+
+def validate_anthropic_key(api_key, status_callback):
+    """Validates the Anthropic API key by a lightweight operation (e.g., count_tokens)."""
+    if not api_key:
+        return False, "API Key is empty."
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        # Using count_tokens as a very lightweight call to check client initialization and basic auth
+        client.count_tokens("test") 
+        status_callback("Anthropic API Key appears valid (client initialized).", "VERBOSE")
+        return True, "Valid"
+    except anthropic.AuthenticationError:
+        status_callback("Anthropic AuthenticationError: Invalid API Key.", "ERROR")
+        return False, "Invalid API Key."
+    except anthropic.APIConnectionError as e:
+        status_callback(f"Anthropic APIConnectionError: {e}", "ERROR")
+        return False, "Connection Error."
+    except anthropic.RateLimitError as e:
+        status_callback(f"Anthropic RateLimitError: {e}", "ERROR")
+        return False, "Rate Limit Exceeded."
+    except anthropic.APIError as e: # Catch other Anthropic API errors
+        status_callback(f"Anthropic APIError: {e}", "ERROR")
+        return False, f"API Error: {str(e)[:100]}"
+    except Exception as e: # Catch any other unexpected errors
+        error_message = f"Anthropic Key Validation Error: {str(e)}"
+        status_callback(error_message, "ERROR")
+        return False, f"Validation Error: {str(e)[:100]}"
+
+# --- End API Key Validation Functions ---
+
 def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, target_language, status_callback, batch_size, gemini_temperature, gemini_top_p, gemini_top_k):
     """Translates text segments using Gemini API."""
     if not gemini_api_key:

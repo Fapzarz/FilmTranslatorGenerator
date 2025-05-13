@@ -10,6 +10,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.5.10] - 2025-05-20
+
+### Changed
+- **Refactored `PreviewManager`**: Moved video preview and preview-with-subtitles logic from `gui/app.py` to the new `gui/preview_manager.py` module for better modularity.
+- **Code Cleanup in `gui/app.py`**: Removed residual code (commented-out methods and old logic blocks) related to functionalities previously moved to `ShortcutManager` and `PreviewManager`, resulting in a leaner `AppGUI` class.
+- **Notebook Button Configuration**: Ensured that buttons within the notebook tabs (Copy, Save As, Preview with Subtitles, Apply Editor Changes) in `gui/app.py` are correctly configured to call their respective methods, including those from the new `PreviewManager` and existing `EditorManager`.
+
+### Improved
+- Improved code organization and maintainability by further decoupling functionalities from `gui/app.py`.
+
 ## [2.5.5] - 2025-05-17
 
 ### Changed
@@ -165,10 +175,20 @@ Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.5.10] - 2025-05-20
+
+### Changed
+- **Refaktorisasi `PreviewManager`**: Memindahkan logika pratinjau video dan pratinjau video dengan subtitle dari `gui/app.py` ke modul baru `gui/preview_manager.py` untuk modularitas yang lebih baik.
+- **Pembersihan Kode di `gui/app.py`**: Menghapus sisa kode (metode yang dikomentari dan blok logika lama) yang terkait dengan fungsionalitas yang sebelumnya dipindahkan ke `ShortcutManager` dan `PreviewManager`, menghasilkan kelas `AppGUI` yang lebih ramping.
+- **Konfigurasi Tombol Notebook**: Memastikan bahwa tombol-tombol di dalam tab notebook (Salin, Simpan Sebagai, Pratinjau dengan Subtitle, Terapkan Perubahan Editor) di `gui/app.py` dikonfigurasi dengan benar untuk memanggil metode masing-masing, termasuk metode dari `PreviewManager` yang baru dan `EditorManager` yang sudah ada.
+
+### Improved
+- Peningkatan organisasi dan keterbacaan kode dengan lebih lanjut memisahkan fungsionalitas dari `gui/app.py`.
+
 ## [2.5.5] - 2025-05-17
 
 ### Changed
-- **Refaktorisasi Kode Mayor**: Melakukan refaktorisasi signifikan pada modul `gui/app.py` dengan memecah fungsionalitasnya ke beberapa modul manager dan styler khusus:
+- **Major Code Refactoring**: Melakukan refaktorisasi signifikan pada modul `gui/app.py` dengan memecah fungsionalitasnya ke beberapa modul manager dan styler khusus:
   - `gui/main_layout.py`: Menangani pembuatan panel UI kiri dan kanan.
   - `gui/project_manager.py`: Mengelola logika penyimpanan dan pemuatan proyek.
   - `gui/queue_manager.py`: Mengontrol logika manajemen antrean video.

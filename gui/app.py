@@ -4,7 +4,8 @@ Main GUI application class for Film Translator Generator.
 import os
 import json
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, ttk, Listbox, Scrollbar, Canvas # Explicitly import Listbox etc. if tk aliasing is removed for root
+from tkinterdnd2 import TkinterDnD, DND_FILES # Import TkinterDnD
 import threading
 from datetime import datetime
 import torch
@@ -13,67 +14,67 @@ import sv_ttk
 import tempfile # For temporary subtitle file
 import subprocess # For opening video with subtitles more reliably
 import sys # For platform-specific operations
-import re # For parsing editor content later
+# import re # No longer directly used in AppGUI after editor refactor
 
 from config import (
     APP_TITLE, CONFIG_FILE, get_default_config, LANGUAGES, 
     WHISPER_MODELS, DEVICES, COMPUTE_TYPES, OUTPUT_FORMATS, 
     GITHUB_URL, APP_VERSION, TRANSLATION_PROVIDERS, 
-    OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODEL, GEMINI_MODELS, # Added GEMINI_MODELS
-    # Add subtitle style constants
+    OPENAI_MODELS, ANTHROPIC_MODELS, DEEPSEEK_MODEL, GEMINI_MODELS,
     SUBTITLE_FONTS, SUBTITLE_COLORS, SUBTITLE_SIZES, SUBTITLE_POSITIONS,
-    SUBTITLE_OUTLINE_COLORS, SUBTITLE_OUTLINE_WIDTHS, SUBTITLE_BG_COLORS, SUBTITLE_BG_OPACITY
+    SUBTITLE_OUTLINE_COLORS, SUBTITLE_OUTLINE_WIDTHS, SUBTITLE_BG_COLORS, SUBTITLE_BG_OPACITY,
+    DEFAULT_SHORTCUTS # Import DEFAULT_SHORTCUTS
 )
 from backend.transcribe import transcribe_video, load_whisper_model
 from backend.translate import translate_text
+# Import validation functions
+from backend.translate import validate_gemini_key, validate_openai_key, validate_anthropic_key 
 from utils.format import format_output
 from utils.media import extract_video_thumbnail, play_video_preview, get_video_info
-from gui.components import create_advanced_settings_dialog, create_about_dialog
+from gui.components import create_advanced_settings_dialog, create_about_dialog, create_shortcut_settings_dialog # Import create_shortcut_settings_dialog
 from gui.main_layout import create_left_pane, create_right_pane
-# Import project management functions
 from gui import project_manager
-# Import queue management functions
 from gui import queue_manager
-# Import video processing functions
 from gui import video_processor
-# Import subtitle styling functions
 from gui import subtitle_styler
-# Import editor management functions
 from gui import editor_manager
+from gui.shortcut_manager import ShortcutManager # Import ShortcutManager
+from gui.preview_manager import PreviewManager # Import PreviewManager
 
 class AppGUI:
-    def __init__(self, root):
-        self.root = root
+    def __init__(self): # Removed root_master argument
+        self.root = TkinterDnD.Tk() # Always create TkinterDnD.Tk() as the root
         self.root.title(APP_TITLE)
-        self.root.geometry("900x700")  # Larger size for modern UI
-        self.root.minsize(800, 600)    # Set minimum window size
+        self.root.geometry("900x700")
+        self.root.minsize(800, 600)
         
-        # Apply modern theme
-        sv_ttk.set_theme("dark")  # Start with dark theme
+        # Ensure tkinter is available for other widgets, can use tk.StringVar directly etc.
+        # Or keep 'import tkinter as tk' if preferred and just use TkinterDnD.Tk() for root.
+        # For now, assuming direct use of ttk.Frame, tk.StringVar etc. is fine.
         
-        # Initialize variables
-        self.video_queue = []  # List to store video file paths
-        self.processed_file_data = {} # Stores status and results per file path
-        self.current_processing_video = None # Path of the video currently being processed
-        self.selected_video_in_queue = tk.StringVar() 
-        self.current_project_path = None # Path to the currently open project file
+        sv_ttk.set_theme("dark")
         
-        # Statistics Variables
+        self.video_queue = []
+        self.processed_file_data = {}
+        self.current_processing_video = None
+        self.selected_video_in_queue = tk.StringVar() # tk needed here
+        self.current_project_path = None
+        
         self.stat_total_files = tk.StringVar(value="Total Files: 0")
         self.stat_processed_files = tk.StringVar(value="Processed: 0")
         self.stat_pending_files = tk.StringVar(value="Pending: 0")
         self.stat_failed_files = tk.StringVar(value="Failed: 0")
-        self.extensive_logging_var = tk.StringVar() # For extensive logging setting
-        self.translation_provider_var = tk.StringVar() # New var for translation provider
+        self.extensive_logging_var = tk.StringVar()
+        self.translation_provider_var = tk.StringVar()
         
-        self.gemini_api_key_var = tk.StringVar() # Renamed from self.api_key for clarity
+        self.gemini_api_key_var = tk.StringVar()
         self.openai_api_key_var = tk.StringVar() 
-        self.anthropic_api_key_var = tk.StringVar() # New for Anthropic API Key
-        self.deepseek_api_key_var = tk.StringVar() # New for DeepSeek API Key
-        self.gemini_model_var = tk.StringVar() # New for Gemini model selection
+        self.anthropic_api_key_var = tk.StringVar()
+        self.deepseek_api_key_var = tk.StringVar()
+        self.gemini_model_var = tk.StringVar()
         
         self.openai_model_var = tk.StringVar() 
-        self.anthropic_model_var = tk.StringVar() # New for Anthropic model
+        self.anthropic_model_var = tk.StringVar()
 
         self.target_language = tk.StringVar()
         self.whisper_model_name_var = tk.StringVar()
@@ -86,50 +87,60 @@ class AppGUI:
         self.preview_var = tk.StringVar(value="On")
         self.auto_save_var = tk.StringVar(value="Off")
         
-        self.gemini_temperature_var = tk.DoubleVar()
+        self.gemini_temperature_var = tk.DoubleVar() # tk needed here
         self.gemini_top_p_var = tk.DoubleVar()
         self.gemini_top_k_var = tk.IntVar()
         
-        # Subtitle style variables
         self.subtitle_font_var = tk.StringVar(value=SUBTITLE_FONTS[0])
         self.subtitle_color_var = tk.StringVar(value=SUBTITLE_COLORS[0])
-        self.subtitle_size_var = tk.StringVar(value=SUBTITLE_SIZES[2])  # Default to a medium size (index 2)
+        self.subtitle_size_var = tk.StringVar(value=SUBTITLE_SIZES[2])
         self.subtitle_position_var = tk.StringVar(value=SUBTITLE_POSITIONS[0])
         self.subtitle_outline_color_var = tk.StringVar(value=SUBTITLE_OUTLINE_COLORS[0])
-        self.subtitle_outline_width_var = tk.StringVar(value=SUBTITLE_OUTLINE_WIDTHS[1])  # Default width of 1
+        self.subtitle_outline_width_var = tk.StringVar(value=SUBTITLE_OUTLINE_WIDTHS[1])
         self.subtitle_bg_color_var = tk.StringVar(value=SUBTITLE_BG_COLORS[0])
         self.subtitle_bg_opacity_var = tk.StringVar(value=SUBTITLE_BG_OPACITY[0])
         
-        # Configure button style
         self.style = ttk.Style()
         self.style.configure("Accent.TButton", font=("", 10, "bold"))
         
-        # Model instance
         self.whisper_model = None
+        # self.app_shortcuts = {} # Removed: Handled by ShortcutManager
         
-        # Results storage
         self.transcribed_segments = None
         self.translated_segments = None
         self.current_output = None
         
-        # Create main frame structure
+        self.api_key_status_labels = {}
+        
+        self.shortcut_manager = ShortcutManager(self) # Initialize ShortcutManager
+        self.preview_manager = PreviewManager(self) # Initialize PreviewManager
+
         self.create_menu()
         self.create_main_frame()
         
-        # Load configuration
-        self._load_config() # This will also call _update_translation_settings_ui
-        self.update_compute_types() # Ensure this is called after device_var is set by _load_config
-        
-        # Update subtitle preview with loaded settings
-        subtitle_styler.refresh_subtitle_style_preview(self) # Call after canvas is created and settings loaded
-        
-        # Update theme based on loaded config
-        self._apply_theme() # Ensure theme is applied
+        # Configure commands for buttons returned by create_notebook from components
+        if hasattr(self, 'text_widgets'):
+            if 'copy_button' in self.text_widgets and self.text_widgets['copy_button']:
+                self.text_widgets['copy_button'].config(command=self.copy_to_clipboard)
+            if 'save_button' in self.text_widgets and self.text_widgets['save_button']:
+                self.text_widgets['save_button'].config(command=self.save_output_file)
+            if 'preview_sub_button' in self.text_widgets and self.text_widgets['preview_sub_button']:
+                self.text_widgets['preview_sub_button'].config(command=self.preview_manager.preview_video_with_subtitles)
+            if 'save_editor_button' in self.text_widgets and self.text_widgets['save_editor_button']:
+                # Assuming editor_manager.save_editor_changes(self) is the correct method signature
+                self.text_widgets['save_editor_button'].config(command=lambda: editor_manager.save_editor_changes(self))
 
-        # Update queue statistics on startup after loading config/project
+        self._load_config() # This will call shortcut_manager.load_shortcuts
+        # self._bind_shortcuts() # Removed: Called by shortcut_manager or after its loading
+        self.shortcut_manager.bind_shortcuts() # Bind shortcuts after loading config via shortcut_manager
+        self.update_compute_types()
+        
+        subtitle_styler.refresh_subtitle_style_preview(self)
+        
+        self._apply_theme()
+
         queue_manager.update_queue_statistics(self)
 
-        # Set up save on exit
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
     
     def on_closing(self):
@@ -168,6 +179,7 @@ class AppGUI:
         
         # Advanced settings
         settings_menu.add_command(label="Advanced Settings", command=self.open_advanced_settings)
+        settings_menu.add_command(label="Keyboard Shortcuts...", command=self.shortcut_manager.open_shortcut_settings) # Use ShortcutManager method
         menubar.add_cascade(label="Settings", menu=settings_menu)
         
         # Help menu
@@ -236,32 +248,40 @@ class AppGUI:
         webbrowser.open(GITHUB_URL)
     
     def _apply_theme(self):
-        """Apply the selected theme to the application"""
+        """Apply the selected theme to the application and refresh preview if needed."""
+        selected_video_path = None
+        if hasattr(self, 'video_listbox') and self.video_listbox.curselection():
+            selected_indices = self.video_listbox.curselection()
+            if selected_indices:
+                # Ensure the index is valid for self.video_queue
+                listbox_index = selected_indices[0]
+                if listbox_index < len(self.video_queue):
+                    selected_video_path = self.video_queue[listbox_index]
+
         theme = self.theme_var.get()
         sv_ttk.set_theme(theme)
         self.log_status(f"Theme changed to {theme}")
+
+        # Restore preview if a video was selected
+        if selected_video_path and hasattr(self, 'preview_manager'):
+            self.log_status(f"Refreshing preview for {os.path.basename(selected_video_path)} after theme change.", "VERBOSE")
+            self.preview_manager.update_video_preview_info(selected_video_path)
     
-    def preview_video(self):
-        """Preview the selected video file from the queue (if one is selected and processed/valid)."""
-        selected_indices = self.video_listbox.curselection()
-        if not selected_indices:
-            messagebox.showerror("Error", "Please select a video from the queue to preview.")
-            return
+    def _restore_video_preview_if_selected(self):
+        """Restores the video preview (thumbnail and info) if a video is currently selected in the queue."""
+        selected_video_path = None
+        if hasattr(self, 'video_listbox') and self.video_listbox.curselection():
+            selected_indices = self.video_listbox.curselection()
+            if selected_indices:
+                listbox_index = selected_indices[0]
+                # Ensure the index is valid for self.video_queue before accessing
+                if listbox_index < len(self.video_queue):
+                    selected_video_path = self.video_queue[listbox_index]
         
-        # Get the actual full path of the selected video
-        selected_listbox_index = selected_indices[0]
-        if selected_listbox_index >= len(self.video_queue):
-            messagebox.showerror("Error", "Selected video not found in internal queue. Please check selection.")
-            return
-            
-        actual_video_path = self.video_queue[selected_listbox_index] # Get full path from video_queue
-        
-        if not actual_video_path or not os.path.exists(actual_video_path):
-            messagebox.showerror("Error", f"The selected video path is invalid or file does not exist: {actual_video_path}")
-            return
-            
-        play_video_preview(actual_video_path, self.log_status)
-    
+        if selected_video_path and hasattr(self, 'preview_manager'):
+            # self.log_status(f"Restoring preview for {os.path.basename(selected_video_path)} due to UI update.", "VERBOSE")
+            self.preview_manager.update_video_preview_info(selected_video_path)
+
     def copy_to_clipboard(self):
         """Copy output text to clipboard"""
         content = self.text_widgets['output'].get(1.0, tk.END)
@@ -336,6 +356,9 @@ class AppGUI:
         self.subtitle_bg_color_var.set(config_data.get('subtitle_bg_color', defaults['subtitle_bg_color']))
         self.subtitle_bg_opacity_var.set(config_data.get('subtitle_bg_opacity', defaults['subtitle_bg_opacity']))
 
+        # Load keyboard shortcuts - Handled by ShortcutManager
+        self.shortcut_manager.load_shortcuts(config_data, defaults) # Delegate to ShortcutManager
+
         # Load persisted queue and processed data
         self.video_queue = config_data.get('video_queue_history', [])
         self.processed_file_data = config_data.get('processed_file_data_history', {})
@@ -403,7 +426,8 @@ class AppGUI:
                 'subtitle_outline_color': self.subtitle_outline_color_var.get(),
                 'subtitle_outline_width': self.subtitle_outline_width_var.get(),
                 'subtitle_bg_color': self.subtitle_bg_color_var.get(),
-                'subtitle_bg_opacity': self.subtitle_bg_opacity_var.get()
+                'subtitle_bg_opacity': self.subtitle_bg_opacity_var.get(),
+                'shortcuts': self.shortcut_manager.get_shortcuts_for_saving() # Delegate to ShortcutManager
             }
             with open(CONFIG_FILE, 'w') as f:
                 json.dump(config_data, f, indent=4)
@@ -411,55 +435,28 @@ class AppGUI:
         except Exception as e:
             self.log_status(f"Warning: Could not save config file: {e}")
     
-    def update_video_preview(self, video_path):
-        """Update video thumbnail and information for the given path."""
-        if not video_path: # Clear preview if no path
-            self.thumbnail_label.config(image=None)
-            self.thumbnail_label.image = None
-            self.thumbnail_placeholder.pack() # Show placeholder
-            self.video_duration_label.config(text="Duration: N/A")
-            self.video_size_label.config(text="Size: N/A")
-            return
-
-        try:
-            self.thumbnail_placeholder.pack_forget()
-            self.thumbnail_label.config(image=None)
-            
-            thumbnail = extract_video_thumbnail(video_path)
-            if thumbnail:
-                self.thumbnail_label.config(image=thumbnail)
-                self.thumbnail_label.image = thumbnail
-                self.thumbnail_label.pack()
-                self.thumbnail_placeholder.pack_forget()
-            else:
-                self.thumbnail_label.pack_forget()
-                self.thumbnail_placeholder.pack()
-            
-            video_info = get_video_info(video_path)
-            self.video_duration_label.config(text=f"Duration: {video_info['duration']}")
-            self.video_size_label.config(text=f"Size: {video_info['size']}")
-            
-        except Exception as e:
-            self.log_status(f"Error updating video preview: {e}")
-            self.thumbnail_label.pack_forget()
-            self.thumbnail_placeholder.pack()
-            self.video_duration_label.config(text="Duration: N/A")
-            self.video_size_label.config(text="Size: N/A")
-
     def log_status(self, message, level="INFO"):
         """Appends a message to the status text area with timestamp, respects extensive logging setting."""
         if level == "VERBOSE" and self.extensive_logging_var.get() != "On":
             return
 
-        status_text = self.text_widgets['log']
-        status_text.configure(state='normal')
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        status_text.insert(tk.END, f"[{timestamp}] {message}\n")
-        status_text.see(tk.END)
-        status_text.configure(state='disabled')
-        self.root.update_idletasks()
+        # Log to console always for now, or a more robust internal log if needed
+        # print(f"LOG [{level}] {datetime.now().strftime("%H:%M:%S")}: {message}")
+
+        if hasattr(self, 'text_widgets') and 'log' in self.text_widgets:
+            status_text = self.text_widgets['log']
+            status_text.configure(state='normal')
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            status_text.insert(tk.END, f"[{timestamp}] {message}\n")
+            status_text.see(tk.END)
+            status_text.configure(state='disabled')
         
-        self.status_label.config(text=message)
+        if hasattr(self, 'root'): # Check if root window exists
+            self.root.update_idletasks()
+        
+        # Safely update status_label if it exists
+        if hasattr(self, 'status_label') and self.status_label is not None:
+            self.status_label.config(text=message)
 
     def display_output(self, content):
         """Displays content in the output area."""
@@ -563,84 +560,6 @@ class AppGUI:
         
         self.root.update_idletasks()
 
-    def preview_with_subtitles(self):
-        """Saves the current output of the selected video as a temporary subtitle file and attempts to open the video with it."""
-        
-        selected_indices = self.video_listbox.curselection()
-        if not selected_indices:
-            messagebox.showerror("Error", "Please select a video from the queue to preview.")
-            return
-        
-        # Get the actual full path of the selected video
-        # The listbox stores "status + basename". We need the full path from video_queue
-        selected_listbox_index = selected_indices[0]
-        if selected_listbox_index >= len(self.video_queue): # Should not happen if listbox and video_queue are in sync
-            messagebox.showerror("Error", "Selected video not found in internal queue. Please re-add.")
-            return
-            
-        video_path = self.video_queue[selected_listbox_index] # Get full path
-        
-        file_data = self.processed_file_data.get(video_path)
-
-        if not file_data or not file_data.get('output_content'):
-            messagebox.showinfo("Info", f"No subtitles generated for {os.path.basename(video_path)} to preview.")
-            return
-
-        current_output_for_preview = file_data['output_content']
-        output_format = self.output_format_var.get() # Global output format
-        temp_subtitle_path = ""
-
-        try:
-            # Check if we need to apply styling
-            if output_format == "srt" and file_data.get('subtitle_style'):
-                # Only SRT and VTT support styling - for now just implement SRT
-                self.log_status(f"Applying subtitle styling for preview")
-                style = file_data['subtitle_style']
-                
-                # Apply style to the SRT content
-                styled_output = subtitle_styler.format_srt_with_style(self, current_output_for_preview, style)
-                current_output_for_preview = styled_output
-            
-            with tempfile.NamedTemporaryFile(mode="w", suffix=f".{output_format}", delete=False, encoding='utf-8') as tmp_file:
-                tmp_file.write(current_output_for_preview)
-                temp_subtitle_path = tmp_file.name
-            
-            self.log_status(f"Temporary subtitle file for {os.path.basename(video_path)}: {temp_subtitle_path}")
-
-            try:
-                if os.name == 'nt': 
-                    try:
-                        subprocess.Popen(["vlc", video_path, f"--sub-file={temp_subtitle_path}"])
-                        self.log_status(f"Attempting to open {os.path.basename(video_path)} with VLC and subtitles...")
-                    except FileNotFoundError:
-                        self.log_status("VLC not found or failed, trying os.startfile...")
-                        os.startfile(video_path) 
-                elif sys.platform == 'darwin': 
-                    subprocess.Popen(["open", video_path, "--args", "--sub-file", temp_subtitle_path]) 
-                    self.log_status(f"Attempting to open {os.path.basename(video_path)} with subtitles on macOS...")
-                else: 
-                    try:
-                        subprocess.Popen(["vlc", video_path, f"--sub-file={temp_subtitle_path}"])
-                        self.log_status(f"Attempting to open {os.path.basename(video_path)} with VLC and subtitles...")
-                    except FileNotFoundError:
-                        self.log_status("VLC not found or failed, trying xdg-open...")
-                        subprocess.Popen(["xdg-open", video_path])
-                self.log_status(f"Showing video preview: {os.path.basename(video_path)} with subtitles.")
-
-            except Exception as e_open:
-                self.log_status(f"Could not automatically open {os.path.basename(video_path)} with subtitles: {e_open}. Opening video directly.")
-                if os.name == 'nt': os.startfile(video_path)
-                elif sys.platform == 'darwin': subprocess.Popen(["open", video_path])
-                else: subprocess.Popen(["xdg-open", video_path])
-
-        except Exception as e:
-            messagebox.showerror("Preview Error", f"Failed to create temp subtitle or open {os.path.basename(video_path)}: {e}")
-            self.log_status(f"Error during subtitle preview for {os.path.basename(video_path)}: {e}")
-        finally:
-            if temp_subtitle_path and os.path.exists(temp_subtitle_path):
-                 self.log_status(f"Note: Temp subtitle {os.path.basename(temp_subtitle_path)} for {os.path.basename(video_path)} may need cleanup.")
-                 pass
-    
     def _format_timestamp(self, seconds):
         """Helper to format seconds to HH:MM:SS,ms or MM:SS,ms if hours are zero."""
         if seconds is None or not isinstance(seconds, (int, float)):
@@ -666,63 +585,155 @@ class AppGUI:
             return f"{hours:02d}:{minutes:02d}:{secs:02d},{ms:03d}"
         return f"{minutes:02d}:{secs:02d},{ms:03d}"
 
+    def _handle_drop_files(self, event):
+        """Handles files dropped onto the registered drop target (video_listbox)."""
+        raw_paths_string = event.data
+        self.log_status(f"Files dropped (raw string): {raw_paths_string}", "VERBOSE")
+
+        # Use tk.splitlist to correctly parse paths, especially those with spaces
+        # which are often enclosed in {}.
+        try:
+            # self.root is TkinterDnD.Tk(), so self.root.tk should be the Tcl interpreter instance
+            parsed_file_paths = self.root.tk.splitlist(raw_paths_string)
+        except tk.TclError as e:
+            self.log_status(f"Error parsing dropped files using tk.splitlist: {e}", "ERROR")
+            parsed_file_paths = [] # Fallback or error state
+        
+        if not parsed_file_paths and raw_paths_string: # If splitlist failed but there was data
+            # Fallback to simple split if raw_paths_string doesn't look like a tcl list
+            # This is a less robust fallback.
+            if '{' not in raw_paths_string and '}' not in raw_paths_string:
+                 parsed_file_paths = raw_paths_string.split()
+                 self.log_status(f"Used fallback split for dropped files: {parsed_file_paths}", "WARNING")
+
+
+        if parsed_file_paths:
+            self.log_status(f"Parsed dropped files: {parsed_file_paths}", "INFO")
+            # Pass the list of file paths to the existing queue manager function
+            queue_manager.add_videos_to_queue(self, file_paths_to_add=list(parsed_file_paths)) # Ensure it's a list
+        else:
+            self.log_status("No valid file paths found in drop event after parsing.", "WARNING")
+
+    def _validate_api_key_for_provider(self, provider_name, api_key_var, status_label):
+        """Validates the API key for the given provider in a separate thread."""
+        api_key = api_key_var.get()
+        if not api_key:
+            status_label.config(text="Key is empty", foreground="orange")
+            return
+
+        status_label.config(text="Validating...", foreground="blue")
+        self.root.update_idletasks() # Ensure UI update
+
+        def validation_thread_task():
+            is_valid = False
+            message = "Validation Error"
+            
+            try:
+                if provider_name == "Gemini":
+                    is_valid, message = validate_gemini_key(api_key, self.log_status)
+                elif provider_name == "OpenAI":
+                    is_valid, message = validate_openai_key(api_key, self.log_status)
+                elif provider_name == "Anthropic":
+                    is_valid, message = validate_anthropic_key(api_key, self.log_status)
+                else:
+                    message = "Unknown provider for validation."
+            except Exception as e:
+                message = f"Error: {str(e)[:50]}" # Show a concise error
+                self.log_status(f"API Key validation failed for {provider_name}: {e}", "ERROR")
+
+            # Update UI from the main thread
+            def update_ui():
+                if is_valid:
+                    status_label.config(text=message, foreground="green")
+                else:
+                    status_label.config(text=message, foreground="red")
+            
+            self.root.after(0, update_ui)
+
+        # Run in a separate thread to avoid freezing the UI
+        threading.Thread(target=validation_thread_task, daemon=True).start()
+
     def _update_translation_settings_ui(self, event=None):
         """Update the translation settings UI based on the selected provider."""
-        # Clear previous provider settings
         for widget in self.provider_details_frame.winfo_children():
             widget.destroy()
+        self.api_key_status_labels.clear() # Clear old status labels
 
         provider = self.translation_provider_var.get()
         
         if provider == "Gemini":
-            # API key field
             key_frame = ttk.Frame(self.provider_details_frame)
             key_frame.pack(fill=tk.X, pady=3)
-            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Entry(key_frame, textvariable=self.gemini_api_key_var, width=40, show="•").pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,2))
+            ttk.Entry(key_frame, textvariable=self.gemini_api_key_var, width=30, show="•").pack(side=tk.LEFT, padx=(0,2), fill=tk.X, expand=True)
             
-            # Model field - changed to Combobox
+            status_label_gemini = ttk.Label(key_frame, text="Not Validated", width=15, anchor="w")
+            status_label_gemini.pack(side=tk.LEFT, padx=(2,2))
+            self.api_key_status_labels["Gemini"] = status_label_gemini
+            
+            ttk.Button(key_frame, text="Validate", width=8,
+                       command=lambda p="Gemini", k=self.gemini_api_key_var, s=status_label_gemini: 
+                       self._validate_api_key_for_provider(p, k, s)).pack(side=tk.LEFT, padx=(2,0))
+
             model_frame = ttk.Frame(self.provider_details_frame)
             model_frame.pack(fill=tk.X, pady=3)
             ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT, padx=(0,5))
-            # ttk.Label(model_frame, text="gemini-2.5-flash-preview-04-17", width=25).pack(side=tk.LEFT, padx=5) # Old label
-            ttk.Combobox(model_frame, textvariable=self.gemini_model_var, values=GEMINI_MODELS, state="readonly", width=25).pack(side=tk.LEFT, padx=5)
+            ttk.Combobox(model_frame, textvariable=self.gemini_model_var, values=GEMINI_MODELS, state="readonly", width=38).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
             
         elif provider == "OpenAI":
-            # API key field
             key_frame = ttk.Frame(self.provider_details_frame)
             key_frame.pack(fill=tk.X, pady=3)
-            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Entry(key_frame, textvariable=self.openai_api_key_var, width=40, show="•").pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,2))
+            ttk.Entry(key_frame, textvariable=self.openai_api_key_var, width=30, show="•").pack(side=tk.LEFT, padx=(0,2), fill=tk.X, expand=True)
+
+            status_label_openai = ttk.Label(key_frame, text="Not Validated", width=15, anchor="w")
+            status_label_openai.pack(side=tk.LEFT, padx=(2,2))
+            self.api_key_status_labels["OpenAI"] = status_label_openai
+
+            ttk.Button(key_frame, text="Validate", width=8,
+                       command=lambda p="OpenAI", k=self.openai_api_key_var, s=status_label_openai:
+                       self._validate_api_key_for_provider(p, k, s)).pack(side=tk.LEFT, padx=(2,0))
             
-            # Model dropdown
             model_frame = ttk.Frame(self.provider_details_frame)
             model_frame.pack(fill=tk.X, pady=3)
             ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Combobox(model_frame, textvariable=self.openai_model_var, values=OPENAI_MODELS, state="readonly", width=25).pack(side=tk.LEFT, padx=5)
+            ttk.Combobox(model_frame, textvariable=self.openai_model_var, values=OPENAI_MODELS, state="readonly", width=38).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
             
         elif provider == "Anthropic":
-            # API key field
             key_frame = ttk.Frame(self.provider_details_frame)
             key_frame.pack(fill=tk.X, pady=3)
-            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Entry(key_frame, textvariable=self.anthropic_api_key_var, width=40, show="•").pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-            
-            # Model dropdown
+            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,2))
+            ttk.Entry(key_frame, textvariable=self.anthropic_api_key_var, width=30, show="•").pack(side=tk.LEFT, padx=(0,2), fill=tk.X, expand=True)
+
+            status_label_anthropic = ttk.Label(key_frame, text="Not Validated", width=15, anchor="w")
+            status_label_anthropic.pack(side=tk.LEFT, padx=(2,2))
+            self.api_key_status_labels["Anthropic"] = status_label_anthropic
+
+            ttk.Button(key_frame, text="Validate", width=8,
+                       command=lambda p="Anthropic", k=self.anthropic_api_key_var, s=status_label_anthropic:
+                       self._validate_api_key_for_provider(p, k, s)).pack(side=tk.LEFT, padx=(2,0))
+
             model_frame = ttk.Frame(self.provider_details_frame)
             model_frame.pack(fill=tk.X, pady=3)
             ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Combobox(model_frame, textvariable=self.anthropic_model_var, values=ANTHROPIC_MODELS, state="readonly", width=25).pack(side=tk.LEFT, padx=5)
+            ttk.Combobox(model_frame, textvariable=self.anthropic_model_var, values=ANTHROPIC_MODELS, state="readonly", width=38).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
             
         elif provider == "DeepSeek":
-            # API key field
             key_frame = ttk.Frame(self.provider_details_frame)
             key_frame.pack(fill=tk.X, pady=3)
-            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,5))
-            ttk.Entry(key_frame, textvariable=self.deepseek_api_key_var, width=40, show="•").pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+            ttk.Label(key_frame, text="API Key:").pack(side=tk.LEFT, padx=(0,2))
+            # DeepSeek key validation might not be possible with a simple model list if it uses OpenAI client strictly.
+            # For now, no validation button for DeepSeek unless a specific lightweight call is known.
+            ttk.Entry(key_frame, textvariable=self.deepseek_api_key_var, width=40, show="•").pack(side=tk.LEFT, padx=(0,2), fill=tk.X, expand=True)
+            # If a validation method for DeepSeek is added, the button and label can be included here.
             
-            # Model field (non-editable as only one model is supported currently)
             model_frame = ttk.Frame(self.provider_details_frame)
             model_frame.pack(fill=tk.X, pady=3)
             ttk.Label(model_frame, text="Model:").pack(side=tk.LEFT, padx=(0,5))
             ttk.Label(model_frame, text=DEEPSEEK_MODEL, width=25).pack(side=tk.LEFT, padx=5)
+
+    def _handle_apply_new_shortcuts(self, new_shortcuts):
+        """Handles applying new shortcuts from the settings dialog via ShortcutManager and saves config."""
+        self.shortcut_manager.apply_new_shortcuts_from_dialog(new_shortcuts)
+        self._save_config() # Save the entire application configuration
+        self.log_status("AppGUI: Configuration saved after shortcut update.", "INFO")

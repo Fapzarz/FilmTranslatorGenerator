@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinterdnd2 import DND_FILES # Import DND_FILES
 from gui.components import create_progress_frame, create_notebook # Added create_notebook
 from config import (
     SUBTITLE_FONTS, SUBTITLE_COLORS, SUBTITLE_SIZES, SUBTITLE_POSITIONS,
@@ -29,6 +30,13 @@ def create_left_pane(app, parent_container):
     app.video_listbox = tk.Listbox(queue_management_frame, height=8, selectmode=tk.SINGLE)
     app.video_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0,5), pady=5)
     app.video_listbox.bind('<<ListboxSelect>>', lambda event: queue_manager.on_video_select_in_queue(app, event))
+
+    # --- Drag and Drop Setup ---
+    # The DND_FILES constant indicates that the widget should accept dropped files.
+    app.video_listbox.drop_target_register(DND_FILES)
+    # Bind the <<Drop>> event to the handler method in AppGUI
+    app.video_listbox.dnd_bind('<<Drop>>', lambda e: app._handle_drop_files(e))
+    # --- End Drag and Drop Setup ---
 
     # Scrollbar for listbox
     listbox_scrollbar = ttk.Scrollbar(queue_management_frame, orient=tk.VERTICAL, command=app.video_listbox.yview)
@@ -78,7 +86,7 @@ def create_left_pane(app, parent_container):
     app.font_combobox = ttk.Combobox(font_frame, textvariable=app.subtitle_font_var, 
                                       values=SUBTITLE_FONTS, state="readonly", width=18)
     app.font_combobox.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-    app.font_combobox.bind("<<ComboboxSelected>>", lambda event: subtitle_styler.refresh_subtitle_style_preview(app, event))
+    app.font_combobox.bind("<<ComboboxSelected>>", lambda event: (subtitle_styler.refresh_subtitle_style_preview(app, event), app._restore_video_preview_if_selected()))
     
     # Font size and color in same row
     size_color_frame = ttk.Frame(style_settings_frame)
@@ -88,13 +96,13 @@ def create_left_pane(app, parent_container):
     app.size_combobox = ttk.Combobox(size_color_frame, textvariable=app.subtitle_size_var, 
                                      values=SUBTITLE_SIZES, state="readonly", width=6)
     app.size_combobox.pack(side=tk.LEFT, padx=5)
-    app.size_combobox.bind("<<ComboboxSelected>>", lambda event: subtitle_styler.refresh_subtitle_style_preview(app, event))
+    app.size_combobox.bind("<<ComboboxSelected>>", lambda event: (subtitle_styler.refresh_subtitle_style_preview(app, event), app._restore_video_preview_if_selected()))
     
     ttk.Label(size_color_frame, text="Color:", width=6).pack(side=tk.LEFT, padx=(10,5), anchor='w')
     app.color_combobox = ttk.Combobox(size_color_frame, textvariable=app.subtitle_color_var, 
                                       values=SUBTITLE_COLORS, state="readonly", width=10)
     app.color_combobox.pack(side=tk.LEFT, padx=5)
-    app.color_combobox.bind("<<ComboboxSelected>>", lambda event: subtitle_styler.refresh_subtitle_style_preview(app, event))
+    app.color_combobox.bind("<<ComboboxSelected>>", lambda event: (subtitle_styler.refresh_subtitle_style_preview(app, event), app._restore_video_preview_if_selected()))
     
     # Position
     position_frame = ttk.Frame(style_settings_frame)
@@ -103,7 +111,7 @@ def create_left_pane(app, parent_container):
     app.position_combobox = ttk.Combobox(position_frame, textvariable=app.subtitle_position_var, 
                                          values=SUBTITLE_POSITIONS, state="readonly", width=10)
     app.position_combobox.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-    app.position_combobox.bind("<<ComboboxSelected>>", lambda event: subtitle_styler.refresh_subtitle_style_preview(app, event))
+    app.position_combobox.bind("<<ComboboxSelected>>", lambda event: (subtitle_styler.refresh_subtitle_style_preview(app, event), app._restore_video_preview_if_selected()))
     
     # Outline settings
     outline_frame = ttk.Frame(style_settings_frame)
@@ -112,13 +120,13 @@ def create_left_pane(app, parent_container):
     app.outline_width_combobox = ttk.Combobox(outline_frame, textvariable=app.subtitle_outline_width_var, 
                                               values=SUBTITLE_OUTLINE_WIDTHS, state="readonly", width=6)
     app.outline_width_combobox.pack(side=tk.LEFT, padx=5)
-    app.outline_width_combobox.bind("<<ComboboxSelected>>", lambda event: subtitle_styler.refresh_subtitle_style_preview(app, event))
+    app.outline_width_combobox.bind("<<ComboboxSelected>>", lambda event: (subtitle_styler.refresh_subtitle_style_preview(app, event), app._restore_video_preview_if_selected()))
     
     ttk.Label(outline_frame, text="Color:", width=6).pack(side=tk.LEFT, padx=(10,5), anchor='w')
     app.outline_color_combobox = ttk.Combobox(outline_frame, textvariable=app.subtitle_outline_color_var, 
                                               values=SUBTITLE_OUTLINE_COLORS, state="readonly", width=10)
     app.outline_color_combobox.pack(side=tk.LEFT, padx=5)
-    app.outline_color_combobox.bind("<<ComboboxSelected>>", lambda event: subtitle_styler.refresh_subtitle_style_preview(app, event))
+    app.outline_color_combobox.bind("<<ComboboxSelected>>", lambda event: (subtitle_styler.refresh_subtitle_style_preview(app, event), app._restore_video_preview_if_selected()))
     
     # Background settings
     bg_frame = ttk.Frame(style_settings_frame)
@@ -127,13 +135,13 @@ def create_left_pane(app, parent_container):
     app.bg_color_combobox = ttk.Combobox(bg_frame, textvariable=app.subtitle_bg_color_var, 
                                          values=SUBTITLE_BG_COLORS, state="readonly", width=12)
     app.bg_color_combobox.pack(side=tk.LEFT, padx=5)
-    app.bg_color_combobox.bind("<<ComboboxSelected>>", lambda event: subtitle_styler.refresh_subtitle_style_preview(app, event))
+    app.bg_color_combobox.bind("<<ComboboxSelected>>", lambda event: (subtitle_styler.refresh_subtitle_style_preview(app, event), app._restore_video_preview_if_selected()))
     
     ttk.Label(bg_frame, text="Opacity:", width=8).pack(side=tk.LEFT, padx=(10,5), anchor='w')
     app.bg_opacity_combobox = ttk.Combobox(bg_frame, textvariable=app.subtitle_bg_opacity_var, 
                                            values=SUBTITLE_BG_OPACITY, state="readonly", width=6)
     app.bg_opacity_combobox.pack(side=tk.LEFT, padx=5)
-    app.bg_opacity_combobox.bind("<<ComboboxSelected>>", lambda event: subtitle_styler.refresh_subtitle_style_preview(app, event))
+    app.bg_opacity_combobox.bind("<<ComboboxSelected>>", lambda event: (subtitle_styler.refresh_subtitle_style_preview(app, event), app._restore_video_preview_if_selected()))
     
     # Subtitle preview frame
     preview_style_frame = ttk.LabelFrame(subtitle_style_panel, text="Style Preview", padding="10") # Renamed for clarity
@@ -250,11 +258,5 @@ def create_right_pane(app, parent_container):
     # --- Main Work Area: Notebook (bottom part of right_pane_container) ---
     app.notebook, app.text_widgets = create_notebook(right_pane_container)
     app.notebook.pack(fill=tk.BOTH, expand=True, padx=2, pady=(5,2))
-    
-    # Connect the handlers for notebook widgets (ensure this is done after create_notebook)
-    app.text_widgets['copy_button'].config(command=app.copy_to_clipboard)
-    app.text_widgets['save_button'].config(command=app.save_output_file)
-    app.text_widgets['preview_sub_button'].config(command=app.preview_with_subtitles)
-    app.text_widgets['save_editor_button'].config(command=lambda: editor_manager.apply_editor_changes(app))
     
     return right_pane_container 

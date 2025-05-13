@@ -2,10 +2,11 @@
 UI components for Film Translator Generator.
 """
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, messagebox
 import webbrowser
 
-from config import APP_VERSION, GITHUB_URL, THEMES, ACCENT_COLORS, PREVIEW_OPTIONS, AUTO_SAVE_OPTIONS, TRANSLATION_PROVIDERS, OPENAI_MODELS
+from config import APP_VERSION, GITHUB_URL, THEMES, ACCENT_COLORS, PREVIEW_OPTIONS, AUTO_SAVE_OPTIONS, TRANSLATION_PROVIDERS, OPENAI_MODELS, DEFAULT_SHORTCUTS
+from .validators import is_valid_shortcut_string # Import the validator
 
 def create_advanced_settings_dialog(parent, settings):
     """Create advanced settings dialog."""
@@ -109,7 +110,7 @@ def create_advanced_settings_dialog(parent, settings):
     ttk.Label(ext_log_frame, text="Enable Extensive Logging:").pack(side=tk.LEFT, padx=5)
     ttk.Combobox(ext_log_frame, textvariable=settings['extensive_logging_var'], 
                  values=["On", "Off"], state="readonly", width=8).pack(side=tk.LEFT, padx=5)
-
+    
     # Buttons
     button_frame = ttk.Frame(settings_frame)
     button_frame.pack(fill=tk.X, padx=5, pady=10)
@@ -251,6 +252,178 @@ def create_notebook(parent):
         'copy_button': copy_button,
         'save_button': save_button,
         'preview_sub_button': preview_sub_button,
-        'editor_text': editor_text, # Add new widget
-        'save_editor_button': save_editor_button # Add new button
+        'editor': editor_text, # Added editor_text to the returned dict
+        'save_editor_button': save_editor_button # Added save_editor_button
     } 
+
+def create_shortcut_settings_dialog(parent, current_shortcuts, save_callback, log_status_callback):
+    """Create a dialog for managing keyboard shortcuts."""
+    dialog = tk.Toplevel(parent)
+    dialog.title("Keyboard Shortcut Settings")
+    # Adjust geometry as needed, maybe make it scrollable if many shortcuts
+    dialog.geometry("550x600") 
+    dialog.resizable(True, True) # Allow resizing for more shortcuts
+    dialog.transient(parent)
+    dialog.grab_set()
+
+    main_frame = ttk.Frame(dialog, padding="10")
+    main_frame.pack(fill=tk.BOTH, expand=True)
+
+    # Canvas and Scrollbar for scrollable content
+    canvas = tk.Canvas(main_frame)
+    scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+    scrollable_frame = ttk.Frame(canvas)
+
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(
+            scrollregion=canvas.bbox("all")
+        )
+    )
+
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    shortcut_entries = {} # Stores {action_name: entry_var}
+    status_labels = {}    # Stores {action_name: status_label_widget}
+    entry_widgets = {}    # Stores {action_name: entry_widget}
+
+    # Make a sorted list of actions for consistent display order
+    # Replace underscores with spaces and capitalize for better readability
+    sorted_actions = sorted(current_shortcuts.keys())
+    
+    header_frame = ttk.Frame(scrollable_frame)
+    header_frame.pack(fill=tk.X, pady=(0, 5))
+    ttk.Label(header_frame, text="Action", font=("", 10, "bold")).pack(side=tk.LEFT, padx=5, expand=False, anchor="w")
+    ttk.Label(header_frame, text="Shortcut Key", font=("", 10, "bold")).pack(side=tk.LEFT, padx=(5,5), expand=False, anchor="w")
+    ttk.Label(header_frame, text="Status", font=("", 10, "bold")).pack(side=tk.LEFT, padx=(5,5), expand=True, anchor="w") # Status Header
+    ttk.Separator(scrollable_frame, orient='horizontal').pack(fill='x', pady=5)
+
+    def _validate_and_update_ui(action_name_local, entry_var_local, status_label_local, entry_widget_local):
+        shortcut_value = entry_var_local.get()
+        is_valid, message = is_valid_shortcut_string(shortcut_value)
+        
+        # Allow empty string as a way to disable a shortcut, treat as valid but with specific message
+        if not shortcut_value.strip():
+            is_valid = True # Treat empty as valid for disabling
+            message = "Disabled"
+            status_label_local.config(text=message, foreground="gray")
+            entry_widget_local.configure(style="TEntry") # Reset style
+            return is_valid # Return True for empty/disabled
+
+        status_label_local.config(text=message, foreground="green" if is_valid else "red")
+        
+        # Basic visual feedback for entry (more advanced styling could be done via ttk.Style)
+        if is_valid:
+            entry_widget_local.configure(style="Valid.TEntry" if hasattr(ttk.Style(), "map") else "TEntry")
+        else:
+            entry_widget_local.configure(style="Invalid.TEntry" if hasattr(ttk.Style(), "map") else "TEntry")
+        return is_valid
+
+    # Define custom styles for valid/invalid entries if they don't exist
+    # This is a basic way; for more complex styling, themes are better.
+    style = ttk.Style()
+    try:
+        style.configure("Valid.TEntry", fieldbackground="lightgreen")
+        style.configure("Invalid.TEntry", fieldbackground="#FFC0CB") # Light pink
+    except tk.TclError:
+        # If styles already exist or fail (e.g. on some themes), ignore. Basic feedback will still be text color.
+        pass 
+
+    for action_name in sorted_actions:
+        action_row_frame = ttk.Frame(scrollable_frame) # Frame for the entire row
+        action_row_frame.pack(fill=tk.X, pady=2)
+
+        # Display name for the action
+        display_action_name = action_name.replace("_", " ").title()
+        ttk.Label(action_row_frame, text=display_action_name, width=25, anchor="w").pack(side=tk.LEFT, padx=(5,0))
+        
+        entry_var = tk.StringVar(value=current_shortcuts.get(action_name, ""))
+        entry = ttk.Entry(action_row_frame, textvariable=entry_var, width=20)
+        entry.pack(side=tk.LEFT, padx=5)
+        
+        status_label = ttk.Label(action_row_frame, text="", width=30, anchor="w") # Adjusted width
+        status_label.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+
+        shortcut_entries[action_name] = entry_var
+        status_labels[action_name] = status_label
+        entry_widgets[action_name] = entry
+
+        # Initial validation and UI update for each entry
+        _validate_and_update_ui(action_name, entry_var, status_label, entry)
+
+        # Bind validation to FocusOut and KeyRelease events
+        # Use lambda to pass necessary arguments to the validation function
+        entry.bind("<FocusOut>", lambda event, an=action_name, ev=entry_var, sl=status_label, ew=entry: \
+            _validate_and_update_ui(an, ev, sl, ew))
+        entry.bind("<KeyRelease>", lambda event, an=action_name, ev=entry_var, sl=status_label, ew=entry: \
+            _validate_and_update_ui(an, ev, sl, ew))
+
+    button_frame = ttk.Frame(main_frame) # Placed in main_frame, below canvas/scrollbar pack
+    button_frame.pack(fill=tk.X, pady=10, side=tk.BOTTOM) # Ensure it's at the bottom
+
+    def on_save():
+        new_shortcuts = {}
+        all_valid = True
+        first_invalid_action = None
+
+        for action_name, entry_var in shortcut_entries.items():
+            is_valid = _validate_and_update_ui(action_name, entry_var, status_labels[action_name], entry_widgets[action_name])
+            if not is_valid and entry_var.get().strip(): # Only consider non-empty invalid entries for blocking save
+                all_valid = False
+                if not first_invalid_action: # Keep track of the first invalid action for the message
+                    first_invalid_action = action_name.replace("_"," ").title()
+            
+            new_shortcuts[action_name] = entry_var.get()
+
+        if not all_valid:
+            messagebox.showerror("Invalid Shortcuts", 
+                                 f"Cannot save. At least one shortcut (e.g., for '{first_invalid_action}') is invalid or has an issue. Please correct it or clear it to disable.", 
+                                 parent=dialog)
+            return
+
+        try:
+            save_callback(new_shortcuts) # This will be app._apply_new_shortcuts
+            log_status_callback("Shortcut settings saved.", "INFO")
+            dialog.destroy()
+        except Exception as e:
+            log_status_callback(f"Error saving shortcuts: {e}", "ERROR")
+            # Optionally show a messagebox error to the user here too
+            tk.messagebox.showerror("Error", f"Could not save shortcuts: {e}", parent=dialog)
+
+
+    def on_reset_to_defaults():
+        if messagebox.askyesno("Confirm Reset", 
+                               "Are you sure you want to reset all shortcuts to their default values?",
+                               parent=dialog):
+            for action_name, entry_var in shortcut_entries.items():
+                entry_var.set(DEFAULT_SHORTCUTS.get(action_name, ""))
+            log_status_callback("Shortcuts reset to defaults. Press Save to apply.", "INFO")
+
+    ttk.Button(button_frame, text="Save", command=on_save).pack(side=tk.RIGHT, padx=5)
+    ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side=tk.RIGHT, padx=5)
+    ttk.Button(button_frame, text="Reset to Defaults", command=on_reset_to_defaults).pack(side=tk.LEFT, padx=5)
+    
+    # Bind mouse wheel to canvas scrolling
+    def _on_mousewheel(event):
+        # Determine the direction and amount of scroll
+        # On Windows, event.delta is usually +/-120 per notch
+        # On Linux, event.num might be 4 (up) or 5 (down)
+        if event.num == 4:  # Linux scroll up
+            canvas.yview_scroll(-1, "units")
+        elif event.num == 5:  # Linux scroll down
+            canvas.yview_scroll(1, "units")
+        else:  # Windows and others (hopefully event.delta)
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    # Bind for Linux (button 4 and 5)
+    canvas.bind_all("<Button-4>", _on_mousewheel) 
+    canvas.bind_all("<Button-5>", _on_mousewheel)
+    # Bind for Windows/Mac (MouseWheel event)
+    canvas.bind_all("<MouseWheel>", _on_mousewheel)
+    
+    dialog.wait_window() # Ensure dialog blocks until closed
+    return # Or return a status if needed, but grab_set usually handles modal behavior 

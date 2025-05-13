@@ -5,44 +5,78 @@ from gui import editor_manager # Import editor_manager
 
 # Functions related to managing the video processing queue
 
-def add_videos_to_queue(app):
-    """Prompts user to select one or more video files and adds them to the queue."""
-    filepaths = filedialog.askopenfilenames(
-        title="Select Video File(s)",
-        filetypes=(("Video Files", "*.mp4 *.avi *.mkv *.mov *.webm"), ("All Files", "*.*"))
-    )
-    if filepaths:
-        for filepath in filepaths:
-            if filepath not in app.video_queue:
-                app.video_queue.append(filepath)
-                app.processed_file_data[filepath] = {'status': 'Pending', 'transcribed_segments': None, 'translated_segments': None, 'output_content': None}
-                app.video_listbox.insert(tk.END, f"[Pending] {os.path.basename(filepath)}")
-                app.log_status(f"Added to queue: {filepath}")
+def add_videos_to_queue(app, file_paths_to_add=None):
+    """Adds one or more video files to the queue, either from a dialog or a provided list."""
+    filepaths_to_process = []
+    if file_paths_to_add:
+        # Filter for valid files if provided directly (e.g., from drag-drop)
+        # This is a basic check; more robust validation (e.g., actual video format) could be added.
+        for p in file_paths_to_add:
+            if os.path.isfile(p):
+                filepaths_to_process.append(p)
             else:
-                app.log_status(f"Already in queue: {filepath}")
-        app.log_status(f"{len(filepaths)} video(s) selected. Queue size: {len(app.video_queue)}")
+                app.log_status(f"Skipping non-file path from drop: {p}", "WARNING")
+        if not filepaths_to_process:
+            app.log_status("No valid files found in the dropped items.", "INFO")
+            return # No valid files to add from the provided list
+    else:
+        # Fallback to file dialog if no paths are provided directly
+        filepaths_to_process = filedialog.askopenfilenames(
+            title="Select Video File(s)",
+            filetypes=(("Video Files", "*.mp4 *.avi *.mkv *.mov *.webm"), ("All Files", "*.*"))
+        )
+
+    if not filepaths_to_process: # If still no filepaths (dialog cancelled or list was empty/invalid)
+        return
+
+    added_count = 0
+    for filepath in filepaths_to_process:
+        # Normalize path for consistent storage and comparison
+        normalized_filepath = os.path.normpath(filepath)
+        if normalized_filepath not in app.video_queue:
+            app.video_queue.append(normalized_filepath)
+            app.processed_file_data[normalized_filepath] = {
+                'status': 'Pending', 
+                'transcribed_segments': None, 
+                'translated_segments': None, 
+                'output_content': None,
+                'subtitle_style': None # Initialize with no specific style
+            }
+            app.video_listbox.insert(tk.END, f"[Pending] {os.path.basename(normalized_filepath)}")
+            app.log_status(f"Added to queue: {normalized_filepath}")
+            added_count += 1
+        else:
+            app.log_status(f"Already in queue: {normalized_filepath}")
+    
+    if added_count > 0:
+        app.log_status(f"{added_count} new video(s) added. Queue size: {len(app.video_queue)}")
         if app.video_listbox.size() > 0 and not app.video_listbox.curselection():
             app.video_listbox.selection_set(0)
             on_video_select_in_queue(app) # Trigger preview update
-        update_queue_statistics(app) # Update stats
+    elif not file_paths_to_add: # Only show if it was from dialog and nothing was added
+        app.log_status("No new videos selected or added.")
+
+    update_queue_statistics(app) # Update stats
 
 def on_video_select_in_queue(app, event=None):
     """Handles selection change in the video queue listbox."""
     selected_indices = app.video_listbox.curselection()
     if not selected_indices:
-        app.update_video_preview(None) # Clear preview
+        app.preview_manager.update_video_preview_info(None) # Use PreviewManager
         app.display_output("") # Clear output tabs
         app.text_widgets['original'].configure(state='normal'); app.text_widgets['original'].delete(1.0, tk.END); app.text_widgets['original'].configure(state='disabled')
         app.text_widgets['translated'].configure(state='normal'); app.text_widgets['translated'].delete(1.0, tk.END); app.text_widgets['translated'].configure(state='disabled')
-        app.text_widgets['editor_text'].configure(state='disabled'); app.text_widgets['editor_text'].delete(1.0, tk.END) # Clear and disable editor
+        if hasattr(app, 'text_widgets') and 'editor' in app.text_widgets: # Use 'editor'
+            app.text_widgets['editor'].configure(state='normal'); app.text_widgets['editor'].delete(1.0, tk.END); app.text_widgets['editor'].configure(state='disabled') # Clear and disable editor
         return
 
-    raw_listbox_item = app.video_listbox.get(selected_indices[0])
+    listbox_index = selected_indices[0]
+    raw_listbox_item = app.video_listbox.get(listbox_index)
     if "]" in raw_listbox_item:
         filepath_basename = raw_listbox_item.split("] ", 1)[1]
         actual_filepath = next((fp for fp in app.video_queue if os.path.basename(fp) == filepath_basename), None)
         if not actual_filepath:
-             actual_filepath = app.video_queue[selected_indices[0]]
+             actual_filepath = app.video_queue[listbox_index]
     else: 
         actual_filepath = raw_listbox_item
 
@@ -51,7 +85,7 @@ def on_video_select_in_queue(app, event=None):
 def _handle_video_selection_update(app, actual_filepath):
     """Handles the actual UI updates after a video selection, called via root.after()."""
     if actual_filepath and os.path.exists(actual_filepath):
-        app.update_video_preview(actual_filepath)
+        app.preview_manager.update_video_preview_info(actual_filepath) # Use PreviewManager
         file_data = app.processed_file_data.get(actual_filepath)
         if file_data and file_data['status'] in ['Done', 'Error_Translation', 'Error_Transcription', 'Error_Generic'] and file_data.get('translated_segments'):
             app.display_output(file_data.get('output_content', ""))
@@ -60,23 +94,32 @@ def _handle_video_selection_update(app, actual_filepath):
             app.update_comparison_view()
             editor_manager.load_segments_to_editor(app, app.translated_segments) 
             if app.translated_segments:
-                app.text_widgets['editor_text'].configure(state='normal')
+                app.text_widgets['editor'].configure(state='normal')
             else:
-                app.text_widgets['editor_text'].configure(state='disabled')
+                app.text_widgets['editor'].configure(state='disabled')
         elif file_data: 
             app.display_output(f"Video selected: {os.path.basename(actual_filepath)}\nStatus: {file_data['status']}")
             app.text_widgets['original'].configure(state='normal'); app.text_widgets['original'].delete(1.0, tk.END); app.text_widgets['original'].configure(state='disabled')
             app.text_widgets['translated'].configure(state='normal'); app.text_widgets['translated'].delete(1.0, tk.END); app.text_widgets['translated'].configure(state='disabled')
-            app.text_widgets['editor_text'].configure(state='disabled'); app.text_widgets['editor_text'].delete(1.0, tk.END)
+            if hasattr(app, 'text_widgets') and 'editor' in app.text_widgets: # Use 'editor'
+                editor = app.text_widgets['editor'] # Use 'editor'
+                editor.configure(state='normal')
+                editor.delete(1.0, tk.END)
         else: 
             app.display_output(f"No data found for {os.path.basename(actual_filepath)}.")
-            app.text_widgets['editor_text'].configure(state='disabled'); app.text_widgets['editor_text'].delete(1.0, tk.END)
+            if hasattr(app, 'text_widgets') and 'editor' in app.text_widgets: # Use 'editor'
+                editor = app.text_widgets['editor'] # Use 'editor'
+                editor.configure(state='normal')
+                editor.delete(1.0, tk.END)
     else: 
-        app.update_video_preview(None) 
+        app.preview_manager.update_video_preview_info(None) # Use PreviewManager
         app.display_output("")
         app.text_widgets['original'].configure(state='normal'); app.text_widgets['original'].delete(1.0, tk.END); app.text_widgets['original'].configure(state='disabled')
         app.text_widgets['translated'].configure(state='normal'); app.text_widgets['translated'].delete(1.0, tk.END); app.text_widgets['translated'].configure(state='disabled')
-        app.text_widgets['editor_text'].configure(state='disabled'); app.text_widgets['editor_text'].delete(1.0, tk.END)
+        if hasattr(app, 'text_widgets') and 'editor' in app.text_widgets: # Use 'editor'
+            editor = app.text_widgets['editor'] # Use 'editor'
+            editor.configure(state='normal')
+            editor.delete(1.0, tk.END)
 
 def remove_selected_video_from_queue(app):
     """Removes the selected video from the queue."""
@@ -100,11 +143,14 @@ def remove_selected_video_from_queue(app):
              app.video_listbox.selection_set(app.video_listbox.size() - 1)
         on_video_select_in_queue(app)
     else: 
-        app.update_video_preview(None)
+        app.preview_manager.update_video_preview_info(None) # Use PreviewManager
         app.display_output("")
         app.text_widgets['original'].configure(state='normal'); app.text_widgets['original'].delete(1.0, tk.END); app.text_widgets['original'].configure(state='disabled')
         app.text_widgets['translated'].configure(state='normal'); app.text_widgets['translated'].delete(1.0, tk.END); app.text_widgets['translated'].configure(state='disabled')
-        app.text_widgets['editor_text'].configure(state='disabled'); app.text_widgets['editor_text'].delete(1.0, tk.END)
+        if hasattr(app, 'text_widgets') and 'editor' in app.text_widgets: # Use 'editor'
+            editor = app.text_widgets['editor'] # Use 'editor'
+            editor.configure(state='normal')
+            editor.delete(1.0, tk.END)
     update_queue_statistics(app)
 
 def clear_video_queue(app):
@@ -118,11 +164,14 @@ def clear_video_queue(app):
         app.processed_file_data.clear()
         app.video_listbox.delete(0, tk.END)
         app.log_status("Video queue cleared.")
-        app.update_video_preview(None)
+        app.preview_manager.update_video_preview_info(None) # Use PreviewManager
         app.display_output("")
         app.text_widgets['original'].configure(state='normal'); app.text_widgets['original'].delete(1.0, tk.END); app.text_widgets['original'].configure(state='disabled')
         app.text_widgets['translated'].configure(state='normal'); app.text_widgets['translated'].delete(1.0, tk.END); app.text_widgets['translated'].configure(state='disabled')
-        app.text_widgets['editor_text'].configure(state='disabled'); app.text_widgets['editor_text'].delete(1.0, tk.END)
+        if hasattr(app, 'text_widgets') and 'editor' in app.text_widgets: # Use 'editor'
+            editor = app.text_widgets['editor'] # Use 'editor'
+            editor.configure(state='normal')
+            editor.delete(1.0, tk.END)
         update_queue_statistics(app)
 
 def update_queue_statistics(app):
