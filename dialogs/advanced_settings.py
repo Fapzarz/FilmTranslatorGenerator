@@ -261,7 +261,7 @@ class AdvancedSettingsDialog(QDialog):
         
         # Batch size
         self.batch_size = QSpinBox()
-        self.batch_size.setRange(1, 64)
+        self.batch_size.setRange(1, 500)
         self.batch_size.setSingleStep(1)
         whisper_layout.addRow("Batch Size:", self.batch_size)
         

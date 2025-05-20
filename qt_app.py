@@ -11,6 +11,7 @@ import torch
 import gc
 import tempfile
 import subprocess
+import webbrowser
 
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, 
                                QPushButton, QVBoxLayout, QHBoxLayout, QSplitter,
@@ -79,7 +80,7 @@ class QtAppGUI(QMainWindow):
         self.compute_type = "float32" 
         self.theme = "light"
         self.accent_color = "#4b6eaf"
-        self.batch_size = 16
+        self.batch_size = 500
         self.output_format = "srt"
         self.preview_enabled = True
         self.auto_save_enabled = True
@@ -489,15 +490,6 @@ class QtAppGUI(QMainWindow):
         shortcuts_action.triggered.connect(self.open_shortcut_settings)
         settings_menu.addAction(shortcuts_action)
         
-        # Add Debug menu
-        debug_menu = self.menuBar().addMenu("Debug")
-        
-        diagnose_video_action = QAction("Diagnose Video Playback", self)
-        diagnose_video_action.triggered.connect(self.diagnose_playback_issue)
-        debug_menu.addAction(diagnose_video_action)
-        
-        # Removed play video action since video player is now only in Advanced Editor
-        
         # Help menu
         help_menu = self.menuBar().addMenu("Help")
         
@@ -780,8 +772,22 @@ class QtAppGUI(QMainWindow):
     
     def open_documentation(self):
         """Open the documentation."""
-        # Will be implemented later
-        self.log_status("Documentation not yet implemented.")
+        # Path to documentation index
+        docs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs", "index.html")
+        
+        # Check if documentation exists
+        if os.path.exists(docs_path):
+            # Open in default browser
+            self.log_status("Opening documentation in browser...")
+            webbrowser.open(f"file://{os.path.abspath(docs_path)}")
+        else:
+            self.log_status("Documentation files not found.", "WARNING")
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self,
+                "Documentation Not Found",
+                "Documentation files could not be found. Please check your installation."
+            )
     
     def show_about(self):
         """Show the about dialog."""

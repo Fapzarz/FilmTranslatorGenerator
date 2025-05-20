@@ -3,6 +3,7 @@ Configuration settings and constants for Film Translator Generator.
 """
 import os
 import torch
+import json
 
 # --- Configuration File ---
 CONFIG_FILE = "config.json"
@@ -63,8 +64,8 @@ AUTO_SAVE_OPTIONS = ["On", "Off"]
 
 # --- App Info ---
 APP_NAME = "Film Translator Generator"
-APP_TITLE = f"{APP_NAME} 3.0.0-ALPHA 1"
-APP_VERSION = "3.0.0-ALPHA 1"
+APP_TITLE = f"{APP_NAME} 3.0.0-RC1"
+APP_VERSION = "3.0.0-RC1"
 GITHUB_URL = "https://github.com/Fapzarz/FilmTranslatorGenerator"
 
 # --- Default Keyboard Shortcuts ---
@@ -158,5 +159,107 @@ def get_default_config():
         'subtitle_outline_width': DEFAULT_SUBTITLE_OUTLINE_WIDTH,
         'subtitle_bg_color': DEFAULT_SUBTITLE_BG_COLOR,
         'subtitle_bg_opacity': DEFAULT_SUBTITLE_BG_OPACITY,
-        'shortcuts': DEFAULT_SHORTCUTS.copy()  # Tambahkan shortcut ke default config
-    } 
+        'shortcuts': DEFAULT_SHORTCUTS.copy(),  # Tambahkan shortcut ke default config
+        'keys_encrypted': False  # Flag untuk menandakan belum dienkripsi
+    }
+
+def load_config():
+    """
+    Load configuration from the config file.
+    If the file doesn't exist, create it with default values.
+    
+    Returns:
+        dict: Configuration settings
+    """
+    # Try to import crypto utilities if available
+    try:
+        from utils.crypto import decrypt_data, is_encrypted
+        crypto_available = True
+    except ImportError:
+        crypto_available = False
+    
+    config = get_default_config()
+    
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                loaded_config = json.load(f)
+                
+            # Check if API keys are encrypted
+            keys_encrypted = loaded_config.get('keys_encrypted', False)
+            
+            # If keys are encrypted and crypto module is available
+            if keys_encrypted and crypto_available:
+                # Decrypt API keys if present and encrypted
+                if loaded_config.get('gemini_api_key'):
+                    try:
+                        loaded_config['gemini_api_key'] = decrypt_data(loaded_config['gemini_api_key'])
+                    except Exception:
+                        loaded_config['gemini_api_key'] = ""  # Reset if decryption fails
+                        
+                if loaded_config.get('openai_api_key'):
+                    try:
+                        loaded_config['openai_api_key'] = decrypt_data(loaded_config['openai_api_key'])
+                    except Exception:
+                        loaded_config['openai_api_key'] = ""
+                        
+                if loaded_config.get('anthropic_api_key'):
+                    try:
+                        loaded_config['anthropic_api_key'] = decrypt_data(loaded_config['anthropic_api_key'])
+                    except Exception:
+                        loaded_config['anthropic_api_key'] = ""
+                        
+                if loaded_config.get('deepseek_api_key'):
+                    try:
+                        loaded_config['deepseek_api_key'] = decrypt_data(loaded_config['deepseek_api_key'])
+                    except Exception:
+                        loaded_config['deepseek_api_key'] = ""
+                
+            # Update config with loaded values
+            config.update(loaded_config)
+    except Exception as e:
+        print(f"Error loading config: {e}")
+        save_config(config)  # Reset with default configuration
+        
+    return config
+
+def save_config(config):
+    """
+    Save configuration to the config file.
+    
+    Args:
+        config (dict): Configuration settings to save
+    """
+    # Try to import crypto utilities if available
+    try:
+        from utils.crypto import encrypt_data, is_encrypted
+        crypto_available = True
+    except ImportError:
+        crypto_available = False
+    
+    # Create a copy of the config to modify
+    config_to_save = config.copy()
+    
+    # If crypto module is available, encrypt API keys
+    if crypto_available:
+        # Only encrypt if the keys are not already encrypted
+        if not is_encrypted(config_to_save.get('gemini_api_key', "")) and config_to_save.get('gemini_api_key'):
+            config_to_save['gemini_api_key'] = encrypt_data(config_to_save['gemini_api_key'])
+            
+        if not is_encrypted(config_to_save.get('openai_api_key', "")) and config_to_save.get('openai_api_key'):
+            config_to_save['openai_api_key'] = encrypt_data(config_to_save['openai_api_key'])
+            
+        if not is_encrypted(config_to_save.get('anthropic_api_key', "")) and config_to_save.get('anthropic_api_key'):
+            config_to_save['anthropic_api_key'] = encrypt_data(config_to_save['anthropic_api_key'])
+            
+        if not is_encrypted(config_to_save.get('deepseek_api_key', "")) and config_to_save.get('deepseek_api_key'):
+            config_to_save['deepseek_api_key'] = encrypt_data(config_to_save['deepseek_api_key'])
+        
+        # Mark that keys are encrypted
+        config_to_save['keys_encrypted'] = True
+    
+    try:
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config_to_save, f, indent=4)
+    except Exception as e:
+        print(f"Error saving config: {e}") 

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Configuration - Film Translator Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>API Configuration</h1>
+            <p class="version">Film Translator Generator - Version 3.0.0-RC1</p>
+        </header>
+        
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#getting-started">Getting Started</a></li>
+                <li><a href="index.html#transcription">Transcription</a></li>
+                <li><a href="index.html#translation">Translation</a></li>
+                <li><a href="advanced.html">Advanced Features</a></li>
+                <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            </ul>
+        </nav>
+        
+        <main>
+            <section id="api-overview">
+                <h2>API Configuration Overview</h2>
+                <p>Film Translator Generator mendukung beberapa API untuk layanan terjemahan. Dokumen ini menjelaskan cara mendapatkan dan mengkonfigurasi API key untuk setiap layanan.</p>
+                
+                <div class="note">
+                    <p><strong>Catatan Keamanan:</strong> API key disimpan dengan enkripsi pada aplikasi ini, tetapi tetap penting untuk menjaga keamanan dan kerahasiaan API key Anda. Jangan bagikan API key dengan orang lain.</p>
+                </div>
+            </section>
+            
+            <section id="gemini-api">
+                <h2>Google Gemini API</h2>
+                <p>Gemini AI adalah model bahasa generatif dari Google yang kuat untuk terjemahan.</p>
+                
+                <h3>Mendapatkan Google Gemini API Key</h3>
+                <ol>
+                    <li>Kunjungi <a href="https://ai.google.dev/" target="_blank">Google AI Studio</a></li>
+                    <li>Login dengan akun Google Anda</li>
+                    <li>Klik "Get API key" atau buka bagian API keys pada dashboard</li>
+                    <li>Buat API key baru atau gunakan yang sudah ada</li>
+                    <li>Copy API key untuk digunakan di Film Translator Generator</li>
+                </ol>
+                
+                <h3>Model yang Tersedia</h3>
+                <ul>
+                    <li><strong>gemini-2.5-flash-preview-04-17</strong>: Model cepat dengan kemampuan terjemahan yang baik</li>
+                    <li><strong>gemini-2.5-pro-exp-03-25</strong>: Model dengan kualitas terjemahan lebih tinggi (lebih lambat)</li>
+                </ul>
+                
+                <h3>Parameter Gemini</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Nilai Default</th>
+                            <th>Deskripsi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Temperature</td>
+                            <td>0.2</td>
+                            <td>Mengontrol kreativitas output (nilai lebih rendah = output lebih konsisten)</td>
+                        </tr>
+                        <tr>
+                            <td>Top P</td>
+                            <td>0.95</td>
+                            <td>Kontrol nucleaus sampling</td>
+                        </tr>
+                        <tr>
+                            <td>Top K</td>
+                            <td>40</td>
+                            <td>Jumlah token top yang dipertimbangkan</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+            
+            <section id="openai-api">
+                <h2>OpenAI API</h2>
+                <p>OpenAI adalah penyedia model bahasa seperti GPT-4 dan GPT-3.5 yang memberikan hasil terjemahan berkualitas tinggi.</p>
+                
+                <h3>Mendapatkan OpenAI API Key</h3>
+                <ol>
+                    <li>Kunjungi <a href="https://platform.openai.com/signup" target="_blank">OpenAI Platform</a></li>
+                    <li>Buat akun atau login ke akun yang sudah ada</li>
+                    <li>Buka bagian "API Keys" di dashboard</li>
+                    <li>Klik "Create new secret key"</li>
+                    <li>Beri nama pada key (opsional) dan copy key yang dihasilkan</li>
+                </ol>
+                
+                <h3>Model yang Tersedia</h3>
+                <ul>
+                    <li><strong>gpt-4.1</strong>: Model flagship terkini dengan kemampuan terjemahan terbaik</li>
+                    <li><strong>gpt-4.1-mini</strong>: Versi lebih ringan dari GPT-4.1</li>
+                    <li><strong>gpt-4.1-nano</strong>: Versi paling ringan dari GPT-4.1</li>
+                    <li><strong>gpt-4o</strong>: Model multimodal dengan kemampuan terjemahan yang sangat baik</li>
+                    <li><strong>gpt-4o-mini</strong>: Versi lebih ringan dari GPT-4o</li>
+                    <li><strong>gpt-4-turbo-2024-04-09</strong>: Versi turbo dari generasi sebelumnya</li>
+                    <li><strong>gpt-3.5-turbo</strong>: Model ringan dengan biaya terendah</li>
+                </ul>
+            </section>
+            
+            <section id="anthropic-api">
+                <h2>Anthropic API</h2>
+                <p>Anthropic Claude adalah model AI yang kuat dengan kemampuan terjemahan yang sangat baik.</p>
+                
+                <h3>Mendapatkan Anthropic API Key</h3>
+                <ol>
+                    <li>Kunjungi <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a></li>
+                    <li>Buat akun atau login ke akun yang sudah ada</li>
+                    <li>Buka bagian "API Keys"</li>
+                    <li>Klik "Create Key" dan ikuti petunjuk untuk membuat API key baru</li>
+                    <li>Copy API key yang dihasilkan</li>
+                </ol>
+                
+                <h3>Model yang Tersedia</h3>
+                <ul>
+                    <li><strong>claude-3-opus-20240229</strong>: Model Claude 3 Opus (kualitas tertinggi)</li>
+                    <li><strong>claude-3-5-sonnet-20240620</strong>: Claude 3.5 Sonnet</li>
+                    <li><strong>claude-3-7-sonnet-20250219</strong>: Claude 3.7 Sonnet</li>
+                    <li><strong>claude-3-5-sonnet-20241022</strong>: Claude 3.5 Sonnet (versi alternatif)</li>
+                    <li><strong>claude-3-5-haiku-20241022</strong>: Claude 3.5 Haiku (model ringan)</li>
+                </ul>
+            </section>
+            
+            <section id="deepseek-api">
+                <h2>DeepSeek API</h2>
+                <p>DeepSeek menawarkan model bahasa alternatif yang mungkin berguna untuk terjemahan bahasa tertentu.</p>
+                
+                <h3>Mendapatkan DeepSeek API Key</h3>
+                <ol>
+                    <li>Kunjungi <a href="https://platform.deepseek.com/" target="_blank">DeepSeek Platform</a></li>
+                    <li>Buat akun atau login ke akun yang sudah ada</li>
+                    <li>Buka bagian API atau developer settings</li>
+                    <li>Ikuti petunjuk untuk membuat API key baru</li>
+                    <li>Copy API key yang dihasilkan</li>
+                </ol>
+                
+                <h3>Model yang Tersedia</h3>
+                <ul>
+                    <li><strong>deepseek-chat</strong>: Model dasar DeepSeek untuk terjemahan</li>
+                </ul>
+            </section>
+            
+            <section id="security">
+                <h2>Keamanan API Key</h2>
+                <p>Film Translator Generator mengimplementasikan enkripsi untuk semua API key yang disimpan dalam file konfigurasi dan proyek.</p>
+                
+                <h3>Fitur Keamanan</h3>
+                <ul>
+                    <li><strong>Enkripsi Lokal</strong>: API key dienkripsi menggunakan ID mesin sebagai seed enkripsi</li>
+                    <li><strong>Password Opsional</strong>: Anda dapat menambahkan password tambahan untuk meningkatkan keamanan</li>
+                    <li><strong>Tidak Berbagi Key</strong>: API key tidak pernah dikirimkan ke server pihak ketiga</li>
+                </ul>
+                
+                <h3>Praktik Keamanan Terbaik</h3>
+                <ul>
+                    <li>Gunakan password tambahan untuk enkripsi jika proyek akan dibagikan</li>
+                    <li>Jangan menggunakan API key yang sama untuk aplikasi lain</li>
+                    <li>Monitoring penggunaan API key secara berkala</li>
+                    <li>Rotasi API key secara berkala</li>
+                </ul>
+            </section>
+            
+            <section id="cost-management">
+                <h2>Manajemen Biaya</h2>
+                <p>Penggunaan API terjemahan akan dikenakan biaya tergantung pada penyedia layanan. Berikut adalah beberapa strategi untuk mengelola biaya:</p>
+                
+                <h3>Tips Mengelola Biaya</h3>
+                <ul>
+                    <li>Gunakan model yang lebih ringan untuk video panjang</li>
+                    <li>Atur batasan penggunaan pada dashboard penyedia layanan</li>
+                    <li>Untuk pengujian, gunakan file video yang lebih pendek</li>
+                    <li>Gunakan OpenAI GPT-3.5-Turbo atau Gemini Flash untuk biaya lebih rendah</li>
+                </ul>
+                
+                <div class="note">
+                    <p>Film Translator Generator tidak mengumpulkan atau mengakses informasi penagihan Anda. Semua biaya API dikelola secara langsung melalui penyedia layanan (Google, OpenAI, Anthropic, atau DeepSeek).</p>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>&copy; 2025 Film Translator Generator. Dokumentasi untuk Film Translator Generator versi 3.0.0-RC1.</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
