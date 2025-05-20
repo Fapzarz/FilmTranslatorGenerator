@@ -5,6 +5,8 @@ import os
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 from PySide6.QtCore import QUrl
 
+from utils.validators import validate_video_file, validate_path_exists
+
 class QueueManager:
     def __init__(self, app_instance):
         """
@@ -37,12 +39,15 @@ class QueueManager:
         if file_paths_to_add:
             # Filter for valid files if provided directly (e.g., from drag-drop)
             for p in file_paths_to_add:
-                if os.path.isfile(p):
+                # Validate file is a valid video
+                valid, error_message = validate_video_file(p)
+                if valid:
                     filepaths_to_process.append(p)
                 else:
-                    self.app.log_status(f"Skipping non-file path from drop: {p}", "WARNING")
+                    self.app.log_status(f"Skipping invalid video file: {os.path.basename(p)} - {error_message}", "WARNING")
+            
             if not filepaths_to_process:
-                self.app.log_status("No valid files found in the dropped items.", "INFO")
+                self.app.log_status("No valid video files found in the provided items.", "WARNING")
                 return  # No valid files to add from the provided list
         else:
             # Fallback to file dialog if no paths are provided directly
@@ -57,9 +62,20 @@ class QueueManager:
             return
         
         added_count = 0
+        skipped_count = 0
+        invalid_count = 0
+        
         for filepath in filepaths_to_process:
             # Normalize path for consistent storage and comparison
             normalized_filepath = os.path.normpath(filepath)
+            
+            # Perform extra validation on the filepath
+            valid, error_message = validate_video_file(normalized_filepath)
+            if not valid:
+                self.app.log_status(f"Skipping invalid file: {os.path.basename(normalized_filepath)} - {error_message}", "WARNING")
+                invalid_count += 1
+                continue
+                
             if normalized_filepath not in self.app.video_queue:
                 self.app.video_queue.append(normalized_filepath)
                 self.app.processed_file_data[normalized_filepath] = {
@@ -70,25 +86,40 @@ class QueueManager:
                     'subtitle_style': None  # Initialize with no specific style
                 }
                 self.app.video_listbox.addItem(f"[Pending] {os.path.basename(normalized_filepath)}")
-                self.app.log_status(f"Added to queue: {normalized_filepath}")
+                self.app.log_status(f"Added to queue: {os.path.basename(normalized_filepath)}")
                 added_count += 1
             else:
-                self.app.log_status(f"Already in queue: {normalized_filepath}")
+                self.app.log_status(f"Already in queue: {os.path.basename(normalized_filepath)}")
+                skipped_count += 1
         
+        # Report results
         if added_count > 0:
-            self.app.log_status(f"{added_count} new video(s) added. Queue size: {len(self.app.video_queue)}")
+            self.app.log_status(f"{added_count} video(s) added. Queue size: {len(self.app.video_queue)}")
+            if invalid_count > 0:
+                self.app.log_status(f"{invalid_count} invalid video(s) skipped.", "WARNING")
+            if skipped_count > 0:
+                self.app.log_status(f"{skipped_count} duplicate video(s) skipped.", "INFO")
+                
+            # Select first video if none selected
             if self.app.video_listbox.count() > 0 and self.app.video_listbox.currentRow() == -1:
                 self.app.video_listbox.setCurrentRow(0)
                 self.on_video_select_in_queue()  # Trigger preview update
         elif not file_paths_to_add:  # Only show if it was from dialog and nothing was added
-            self.app.log_status("No new videos selected or added.")
+            if invalid_count > 0:
+                QMessageBox.warning(
+                    self.app,
+                    "Invalid Videos",
+                    f"{invalid_count} video(s) could not be added due to invalid format or other issues."
+                )
+            else:
+                self.app.log_status("No new videos selected or added.")
         
         self.update_queue_statistics()  # Update stats
     
     def on_video_select_in_queue(self):
         """Handles selection change in the video queue listbox."""
         current_row = self.app.video_listbox.currentRow()
-        if current_row == -1:
+        if current_row == -1 or current_row >= len(self.app.video_queue):
             # Clear all displays
             if hasattr(self.app, 'preview_manager'):
                 self.app.preview_manager.update_video_preview_info(None)
@@ -100,22 +131,31 @@ class QueueManager:
             self.app.editor_text.clear()
             return
         
-        # Get selected video information
-        selected_item = self.app.video_listbox.item(current_row).text()
-        if "]" in selected_item:
-            filepath_basename = selected_item.split("] ", 1)[1]
-            actual_filepath = next((fp for fp in self.app.video_queue if os.path.basename(fp) == filepath_basename), None)
-            if not actual_filepath:
-                actual_filepath = self.app.video_queue[current_row]
-        else:
-            actual_filepath = selected_item
+        # Get selected video path
+        try:
+            actual_filepath = self.app.video_queue[current_row]
+        except IndexError:
+            self.app.log_status("Error accessing video at selected index.", "ERROR")
+            return
+            
+        # Validate the file still exists
+        valid, error = validate_path_exists(actual_filepath)
+        if not valid:
+            self.app.log_status(f"Selected video not found: {error}", "WARNING")
+            QMessageBox.warning(
+                self.app,
+                "Missing Video",
+                f"The selected video file could not be found:\n{actual_filepath}\n\nIt may have been moved or deleted."
+            )
         
         # Delay the update slightly to allow UI to respond
         self._handle_video_selection_update(actual_filepath)
     
     def _handle_video_selection_update(self, actual_filepath):
         """Handles the actual UI updates after a video selection."""
-        if actual_filepath and os.path.exists(actual_filepath):
+        # Verify file exists before proceeding
+        valid, _ = validate_path_exists(actual_filepath)
+        if valid:
             # Update preview (if a preview system is in place)
             if hasattr(self.app, 'preview_manager'):
                 self.app.preview_manager.update_video_preview_info(actual_filepath)
@@ -173,7 +213,13 @@ class QueueManager:
         original_text = ""
         translated_text = ""
         
-        for i, (orig, trans) in enumerate(zip(self.app.transcribed_segments, self.app.translated_segments)):
+        # Safety check to ensure we don't go out of bounds
+        segment_count = min(len(self.app.transcribed_segments), len(self.app.translated_segments))
+        
+        for i in range(segment_count):
+            orig = self.app.transcribed_segments[i]
+            trans = self.app.translated_segments[i]
+            
             orig_text = orig['text'] if 'text' in orig else orig.get('content', '')
             trans_text = trans['text'] if 'text' in trans else trans.get('content', '')
             
@@ -191,9 +237,13 @@ class QueueManager:
     def _format_time_for_display(self, start_time, end_time):
         """Format time values for display in comparison view."""
         def format_time(seconds):
-            minutes, seconds = divmod(int(seconds), 60)
-            hours, minutes = divmod(minutes, 60)
-            return f"{hours:02}:{minutes:02}:{seconds:02}"
+            try:
+                seconds = float(seconds)
+                minutes, seconds = divmod(int(seconds), 60)
+                hours, minutes = divmod(minutes, 60)
+                return f"{hours:02}:{minutes:02}:{seconds:02}"
+            except (ValueError, TypeError):
+                return "00:00:00"  # Default if time is invalid
         
         return f"[{format_time(start_time)} - {format_time(end_time)}]"
     
@@ -201,90 +251,108 @@ class QueueManager:
         """Removes the selected video from the queue."""
         current_row = self.app.video_listbox.currentRow()
         if current_row == -1:
-            QMessageBox.information(self.app, "Info", "Please select a video from the queue to remove.")
+            QMessageBox.information(self.app, "Remove Video", "Please select a video to remove.")
             return
         
-        filepath_to_remove = self.app.video_queue.pop(current_row)
-        
-        self.app.video_listbox.takeItem(current_row)
-        if filepath_to_remove in self.app.processed_file_data:
-            del self.app.processed_file_data[filepath_to_remove]
-        self.app.log_status(f"Removed from queue: {filepath_to_remove}")
-        
-        # Select new item if available
-        if self.app.video_listbox.count() > 0:
-            if current_row < self.app.video_listbox.count():
-                self.app.video_listbox.setCurrentRow(current_row)
-            else:
-                self.app.video_listbox.setCurrentRow(self.app.video_listbox.count() - 1)
-            self.on_video_select_in_queue()
-        else:
-            # Clear all displays if queue is empty
-            if hasattr(self.app, 'preview_manager'):
-                self.app.preview_manager.update_video_preview_info(None)
+        try:
+            # Get the video filepath
+            filepath = self.app.video_queue[current_row]
             
-            # Clear output display
-            self.app.output_text.clear()
-            self.app.original_text.clear()
-            self.app.translated_text.clear()
-            self.app.editor_text.clear()
-        
-        self.update_queue_statistics()
+            # Remove from the queue and clear data
+            del self.app.video_queue[current_row]
+            if filepath in self.app.processed_file_data:
+                del self.app.processed_file_data[filepath]
+                
+            # Remove from the listbox
+            self.app.video_listbox.takeItem(current_row)
+            
+            # Update status
+            self.app.log_status(f"Removed from queue: {os.path.basename(filepath)}")
+            
+            # Update statistics
+            self.update_queue_statistics()
+            
+            # Select next item if available
+            if self.app.video_listbox.count() > 0:
+                next_row = min(current_row, self.app.video_listbox.count() - 1)
+                self.app.video_listbox.setCurrentRow(next_row)
+                self.on_video_select_in_queue()
+            else:
+                # If queue is empty, clear displays
+                if hasattr(self.app, 'preview_manager'):
+                    self.app.preview_manager.update_video_preview_info(None)
+                
+                self.app.output_text.clear()
+                self.app.original_text.clear()
+                self.app.translated_text.clear()
+                self.app.editor_text.clear()
+        except IndexError:
+            self.app.log_status("Error removing video: Invalid index", "ERROR")
     
     def clear_video_queue(self):
         """Clears all videos from the queue."""
         if not self.app.video_queue:
-            QMessageBox.information(self.app, "Info", "Queue is already empty.")
+            self.app.log_status("Queue is already empty.")
             return
-        
-        reply = QMessageBox.question(
-            self.app, 
-            "Confirm Clear",
-            "Are you sure you want to clear the entire video queue?",
+            
+        # Ask for confirmation
+        response = QMessageBox.question(
+            self.app,
+            "Clear Queue",
+            f"Are you sure you want to clear all {len(self.app.video_queue)} videos from the queue?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
         
-        if reply == QMessageBox.Yes:
-            self.app.video_queue.clear()
-            self.app.processed_file_data.clear()
-            self.app.video_listbox.clear()
-            self.app.log_status("Video queue cleared.")
-            
-            # Clear all displays
-            if hasattr(self.app, 'preview_manager'):
-                self.app.preview_manager.update_video_preview_info(None)
-            
-            # Clear output display
-            self.app.output_text.clear()
-            self.app.original_text.clear()
-            self.app.translated_text.clear()
-            self.app.editor_text.clear()
-            
-            self.update_queue_statistics()
+        if response != QMessageBox.Yes:
+            return
+        
+        # Clear the queue
+        self.app.video_queue.clear()
+        self.app.processed_file_data.clear()
+        self.app.video_listbox.clear()
+        
+        # Clear displays
+        if hasattr(self.app, 'preview_manager'):
+            self.app.preview_manager.update_video_preview_info(None)
+        
+        self.app.output_text.clear()
+        self.app.original_text.clear()
+        self.app.translated_text.clear()
+        self.app.editor_text.clear()
+        
+        # Update status
+        self.app.log_status("Video queue cleared.")
+        
+        # Update statistics
+        self.update_queue_statistics()
     
     def update_queue_statistics(self):
-        """Updates the queue statistics display based on current project data."""
-        total = len(self.app.video_queue)
-        processed = 0
-        pending = 0
-        failed = 0
+        """Updates the statistics labels in the UI."""
+        total_files = len(self.app.video_queue)
         
-        for video_path in self.app.video_queue:
-            file_data = self.app.processed_file_data.get(video_path)
-            if file_data:
-                status = file_data.get('status')
-                if status == 'Done':
-                    processed += 1
-                elif status == 'Pending':
-                    pending += 1
-                elif status and 'Error' in status:
-                    failed += 1
-            else:
-                pending += 1
+        # Count files by status
+        processed_files = 0
+        pending_files = 0
+        failed_files = 0
         
-        # Update statistics labels
-        self.app.stat_total_files.setText(f"Total Files: {total}")
-        self.app.stat_processed_files.setText(f"Processed: {processed}")
-        self.app.stat_pending_files.setText(f"Pending: {pending}")
-        self.app.stat_failed_files.setText(f"Failed: {failed}") 
+        for filepath in self.app.video_queue:
+            file_data = self.app.processed_file_data.get(filepath, {})
+            status = file_data.get('status', 'Pending')
+            
+            if status == 'Done':
+                processed_files += 1
+            elif status in ['Error_Translation', 'Error_Transcription', 'Error_Generic']:
+                failed_files += 1
+            else:  # 'Pending', 'Processing', etc.
+                pending_files += 1
+        
+        # Update the statistics labels
+        if hasattr(self.app, 'stat_total_files'):
+            self.app.stat_total_files.setText(f"Total Files: {total_files}")
+        if hasattr(self.app, 'stat_processed_files'):
+            self.app.stat_processed_files.setText(f"Processed: {processed_files}")
+        if hasattr(self.app, 'stat_pending_files'):
+            self.app.stat_pending_files.setText(f"Pending: {pending_files}")
+        if hasattr(self.app, 'stat_failed_files'):
+            self.app.stat_failed_files.setText(f"Failed: {failed_files}") 

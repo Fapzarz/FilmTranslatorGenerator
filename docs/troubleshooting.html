@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting - Film Translator Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Troubleshooting</h1>
+            <p class="version">Film Translator Generator - Version 3.0.0-RC1</p>
+        </header>
+        
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#getting-started">Getting Started</a></li>
+                <li><a href="index.html#transcription">Transcription</a></li>
+                <li><a href="index.html#translation">Translation</a></li>
+                <li><a href="advanced.html">Advanced Features</a></li>
+                <li><a href="api.html">API Configuration</a></li>
+            </ul>
+        </nav>
+        
+        <main>
+            <section id="common-issues">
+                <h2>Masalah Umum</h2>
+                <p>Berikut adalah solusi untuk beberapa masalah yang sering terjadi saat menggunakan Film Translator Generator.</p>
+                
+                <div class="faq">
+                    <div class="faq-item">
+                        <h3>Aplikasi tidak dapat diluncurkan</h3>
+                        <div class="faq-answer">
+                            <p>Periksa hal-hal berikut:</p>
+                            <ol>
+                                <li>Pastikan semua dependensi telah terinstal dengan benar: <code>pip install -r requirements.txt</code></li>
+                                <li>Periksa log error pada terminal atau konsol</li>
+                                <li>Pastikan Python versi 3.8 atau lebih baru terinstal dan terdeteksi</li>
+                                <li>Coba jalankan dengan mode verbose: <code>python main.py --verbose</code></li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h3>Video tidak dapat diproses</h3>
+                        <div class="faq-answer">
+                            <p>Jika video tidak dapat diproses, coba langkah-langkah berikut:</p>
+                            <ol>
+                                <li>Pastikan format video didukung (MP4, AVI, MKV, MOV, atau WebM)</li>
+                                <li>Periksa jika video tidak rusak dengan membukanya di pemutar video lain</li>
+                                <li>Coba konversi video ke format MP4 dengan FFmpeg: <code>ffmpeg -i input.mkv -c:v libx264 -c:a aac output.mp4</code></li>
+                                <li>Periksa apakah file video mungkin terkunci oleh aplikasi lain</li>
+                            </ol>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h3>Transkripsi gagal atau tidak akurat</h3>
+                        <div class="faq-answer">
+                            <p>Masalah transkripsi dapat disebabkan oleh:</p>
+                            <ul>
+                                <li>Kualitas audio yang buruk - coba normalisasi audio terlebih dahulu</li>
+                                <li>Model Whisper yang terlalu kecil untuk tugas - coba model yang lebih besar (seperti "large-v3")</li>
+                                <li>Kurangnya memori GPU - coba gunakan "int8" compute type atau pindah ke CPU</li>
+                                <li>Bahasa yang tidak terdeteksi secara otomatis - pastikan bahasa dipilih dengan benar</li>
+                            </ul>
+                            <p>Anda juga dapat menggunakan diagnose tool yang tersedia dengan mengklik kanan pada video dan memilih "Diagnose Video Playback".</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h3>Terjemahan gagal atau error API</h3>
+                        <div class="faq-answer">
+                            <p>Jika terjemahan gagal, periksa hal-hal berikut:</p>
+                            <ul>
+                                <li>Pastikan API key valid dan tidak kedaluwarsa</li>
+                                <li>Periksa koneksi internet Anda</li>
+                                <li>Periksa kuota API Anda (mungkin Anda telah mencapai batas)</li>
+                                <li>Coba model terjemahan alternatif (misalnya, dari Gemini ke OpenAI)</li>
+                                <li>Kurangi batch size untuk menghindari timeout API</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <h3>Tampilan video atau preview subtitle tidak berfungsi</h3>
+                        <div class="faq-answer">
+                            <p>Masalah preview dapat disebabkan oleh:</p>
+                            <ul>
+                                <li>Codec video yang tidak terpasang - instal codec media yang diperlukan</li>
+                                <li>Format video yang tidak didukung - konversi ke format yang lebih umum</li>
+                                <li>Konflik dengan driver grafis - perbarui driver grafis</li>
+                                <li>Konflik dengan PySide6 - pastikan versi PySide6 kompatibel dengan sistem Anda</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="error-codes">
+                <h2>Kode Error</h2>
+                <p>Film Translator Generator menyediakan kode error yang dapat membantu mengidentifikasi masalah spesifik.</p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Kode Error</th>
+                            <th>Deskripsi</th>
+                            <th>Solusi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>ERR_TRANSCRIBE_001</td>
+                            <td>Gagal memuat model Whisper</td>
+                            <td>Periksa koneksi internet dan ruang disk. Model Whisper cukup besar.</td>
+                        </tr>
+                        <tr>
+                            <td>ERR_TRANSCRIBE_002</td>
+                            <td>Kesalahan saat ekstraksi audio</td>
+                            <td>Pastikan FFmpeg terinstal dan video tidak rusak.</td>
+                        </tr>
+                        <tr>
+                            <td>ERR_API_001</td>
+                            <td>API key tidak valid</td>
+                            <td>Periksa dan perbarui API key di pengaturan.</td>
+                        </tr>
+                        <tr>
+                            <td>ERR_API_002</td>
+                            <td>Batas kuota API tercapai</td>
+                            <td>Tunggu hingga kuota direset atau beli kuota tambahan dari penyedia API.</td>
+                        </tr>
+                        <tr>
+                            <td>ERR_API_003</td>
+                            <td>Timeout koneksi API</td>
+                            <td>Periksa koneksi internet atau coba lagi nanti.</td>
+                        </tr>
+                        <tr>
+                            <td>ERR_FILE_001</td>
+                            <td>Format file tidak didukung</td>
+                            <td>Konversikan file ke format yang didukung (MP4, AVI, MKV, MOV, WebM).</td>
+                        </tr>
+                        <tr>
+                            <td>ERR_FILE_002</td>
+                            <td>Gagal membaca file</td>
+                            <td>Pastikan file tidak rusak dan dapat diakses.</td>
+                        </tr>
+                        <tr>
+                            <td>ERR_SAVE_001</td>
+                            <td>Gagal menyimpan file output</td>
+                            <td>Periksa izin folder dan ruang disk yang tersedia.</td>
+                        </tr>
+                        <tr>
+                            <td>ERR_CUDA_001</td>
+                            <td>Error CUDA saat transkripsi</td>
+                            <td>Perbarui driver GPU atau pilih opsi CPU sebagai device.</td>
+                        </tr>
+                        <tr>
+                            <td>ERR_MEM_001</td>
+                            <td>Memori tidak cukup</td>
+                            <td>Tutup aplikasi lain, kurangi ukuran model, atau gunakan compute type yang lebih efisien.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+            
+            <section id="diagnostics">
+                <h2>Diagnostik</h2>
+                <p>Film Translator Generator menyediakan beberapa alat diagnostik untuk membantu memecahkan masalah.</p>
+                
+                <h3>Video Diagnostic Tool</h3>
+                <p>Untuk mendiagnosis masalah dengan file video tertentu:</p>
+                <ol>
+                    <li>Klik kanan pada video di daftar antrian</li>
+                    <li>Pilih "Diagnose Video Playback"</li>
+                    <li>Tinjau hasil diagnostik di log</li>
+                </ol>
+                
+                <h3>Log Diagnostik</h3>
+                <p>Log aplikasi dapat memberikan informasi penting tentang masalah:</p>
+                <ul>
+                    <li>Log disimpan di folder <code>logs/</code> dengan format tanggal</li>
+                    <li>Gunakan level logging verbose dengan menjalankan <code>python main.py --debug</code></li>
+                    <li>Untuk masalah API, periksa log untuk kode respons HTTP dan pesan error</li>
+                </ul>
+                
+                <h3>Tes Koneksi API</h3>
+                <p>Untuk menguji koneksi ke API tanpa memproses video penuh:</p>
+                <ol>
+                    <li>Buka menu "Tools"</li>
+                    <li>Pilih "Test API Connection"</li>
+                    <li>Pilih provider API yang ingin diuji</li>
+                    <li>Klik "Test" untuk memverifikasi koneksi dan key</li>
+                </ol>
+            </section>
+            
+            <section id="system-requirements">
+                <h2>Persyaratan Sistem</h2>
+                <p>Pastikan sistem Anda memenuhi persyaratan minimum berikut:</p>
+                
+                <h3>Persyaratan Minimum</h3>
+                <ul>
+                    <li>OS: Windows 10, macOS 10.15+, atau Linux (Ubuntu 20.04+)</li>
+                    <li>Prosesor: Quad-core CPU 2.0 GHz atau lebih baik</li>
+                    <li>RAM: 4GB (8GB direkomendasikan)</li>
+                    <li>Penyimpanan: 2GB ruang disk tersedia (10GB direkomendasikan untuk model)</li>
+                    <li>Python: 3.8 atau lebih baru</li>
+                    <li>FFmpeg: Terinstal dan tersedia di PATH</li>
+                </ul>
+                
+                <h3>Persyaratan untuk Akselerasi GPU</h3>
+                <ul>
+                    <li>NVIDIA GPU dengan CUDA 11.2 atau lebih baru</li>
+                    <li>4GB VRAM minimum (8GB+ direkomendasikan untuk model large)</li>
+                    <li>Driver NVIDIA up-to-date</li>
+                </ul>
+                
+                <h3>Dependensi Software</h3>
+                <p>Film Translator Generator membutuhkan beberapa dependensi utama berikut:</p>
+                <ul>
+                    <li>FFmpeg untuk pemrosesan audio/video</li>
+                    <li>PySide6 untuk antarmuka pengguna</li>
+                    <li>faster-whisper untuk transkripsi</li>
+                    <li>torch untuk framework machine learning</li>
+                </ul>
+                
+                <div class="note">
+                    <p>Jika Anda menghadapi masalah performa, coba gunakan model Whisper yang lebih kecil atau alihkan ke CPU jika GPU Anda tidak memadai.</p>
+                </div>
+            </section>
+            
+            <section id="community-help">
+                <h2>Bantuan Komunitas</h2>
+                <p>Jika Anda tidak dapat menyelesaikan masalah dengan panduan troubleshooting ini, silakan hubungi komunitas:</p>
+                
+                <ul>
+                    <li>Buat issue di <a href="https://github.com/Fapzarz/FilmTranslatorGenerator/issues">GitHub Issues</a></li>
+                    <li>Periksa <a href="https://github.com/Fapzarz/FilmTranslatorGenerator/discussions">GitHub Discussions</a> untuk solusi umum</li>
+                    <li>Periksa CHANGELOG.md untuk masalah yang diketahui dan solusi dalam rilis terbaru</li>
+                </ul>
+                
+                <h3>Saat Melaporkan Bug</h3>
+                <p>Untuk mendapatkan bantuan yang lebih baik, sertakan informasi berikut saat melaporkan bug:</p>
+                <ol>
+                    <li>Versi Film Translator Generator</li>
+                    <li>Sistem operasi dan versi</li>
+                    <li>Spesifikasi hardware (RAM, GPU jika relevan)</li>
+                    <li>Output log lengkap (disalin dari konsol atau dari file log)</li>
+                    <li>Langkah-langkah yang dapat direproduksi untuk memunculkan masalah</li>
+                    <li>Screenshot dari error (jika tersedia)</li>
+                </ol>
+            </section>
+        </main>
+        
+        <footer>
+            <p>&copy; 2025 Film Translator Generator. Dokumentasi untuk Film Translator Generator versi 3.0.0-RC1.</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Features - Film Translator Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Advanced Features</h1>
+            <p class="version">Film Translator Generator - Version 3.0.0-RC1</p>
+        </header>
+        
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#getting-started">Getting Started</a></li>
+                <li><a href="index.html#transcription">Transcription</a></li>
+                <li><a href="index.html#translation">Translation</a></li>
+                <li><a href="api.html">API Configuration</a></li>
+                <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            </ul>
+        </nav>
+        
+        <main>
+            <section id="advanced-editor">
+                <h2>Advanced Subtitle Editor</h2>
+                <p>Film Translator Generator menyediakan editor subtitle lanjutan untuk pengaturan yang lebih presisi dan fleksibel.</p>
+                
+                <h3>Mengakses Editor Lanjutan</h3>
+                <p>Anda dapat mengakses editor subtitle lanjutan dengan:</p>
+                <ol>
+                    <li>Klik kanan pada video dalam antrian</li>
+                    <li>Pilih "Open Advanced Subtitle Editor"</li>
+                </ol>
+                
+                <h3>Fitur Editor Lanjutan</h3>
+                <ul>
+                    <li><strong>Pengeditan Timestamp</strong>: Sesuaikan waktu mulai dan selesai untuk setiap segmen subtitle</li>
+                    <li><strong>Split & Merge Segments</strong>: Gabungkan beberapa segmen atau bagi segmen panjang menjadi lebih kecil</li>
+                    <li><strong>Inline Styling</strong>: Terapkan format ke bagian spesifik dari teks</li>
+                    <li><strong>Kontekstual Editing</strong>: Edit dengan konteks segmen sebelumnya dan berikutnya</li>
+                    <li><strong>Preview Sync</strong>: Lihat subtitle pada video saat mengedit</li>
+                </ul>
+                
+                <div class="note">
+                    <p>Perubahan yang dibuat di editor lanjutan akan diaplikasikan ke dalam proyek saat Anda klik "Apply Changes".</p>
+                </div>
+            </section>
+            
+            <section id="keyboard-shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+                <p>Film Translator Generator menyediakan banyak keyboard shortcut untuk meningkatkan produktivitas.</p>
+                
+                <h3>Default Shortcuts</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fungsi</th>
+                            <th>Shortcut</th>
+                            <th>Deskripsi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Add Videos</td>
+                            <td>Ctrl+O</td>
+                            <td>Buka dialog untuk menambahkan video ke antrian</td>
+                        </tr>
+                        <tr>
+                            <td>Remove Selected Video</td>
+                            <td>Delete</td>
+                            <td>Hapus video yang dipilih dari antrian</td>
+                        </tr>
+                        <tr>
+                            <td>Clear Video Queue</td>
+                            <td>Ctrl+Shift+Delete</td>
+                            <td>Hapus semua video dari antrian</td>
+                        </tr>
+                        <tr>
+                            <td>Process Selected Video</td>
+                            <td>Ctrl+P</td>
+                            <td>Mulai memproses video yang dipilih</td>
+                        </tr>
+                        <tr>
+                            <td>Save Project</td>
+                            <td>Ctrl+S</td>
+                            <td>Simpan proyek saat ini</td>
+                        </tr>
+                        <tr>
+                            <td>Save Project As</td>
+                            <td>Ctrl+Shift+S</td>
+                            <td>Simpan proyek dengan nama file baru</td>
+                        </tr>
+                        <tr>
+                            <td>Load Project</td>
+                            <td>Ctrl+L</td>
+                            <td>Muat proyek yang sudah ada</td>
+                        </tr>
+                        <tr>
+                            <td>Save Subtitles</td>
+                            <td>Ctrl+Alt+S</td>
+                            <td>Simpan subtitle ke file</td>
+                        </tr>
+                        <tr>
+                            <td>Copy Output to Clipboard</td>
+                            <td>Ctrl+C</td>
+                            <td>Salin output subtitle ke clipboard</td>
+                        </tr>
+                        <tr>
+                            <td>Apply Editor Changes</td>
+                            <td>Ctrl+Enter</td>
+                            <td>Terapkan perubahan dari editor</td>
+                        </tr>
+                        <tr>
+                            <td>Open Advanced Settings</td>
+                            <td>Ctrl+,</td>
+                            <td>Buka dialog pengaturan lanjutan</td>
+                        </tr>
+                        <tr>
+                            <td>Show About Dialog</td>
+                            <td>F1</td>
+                            <td>Tampilkan informasi tentang aplikasi</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3>Kustomisasi Shortcut</h3>
+                <p>Anda dapat menyesuaikan keyboard shortcut melalui dialog pengaturan:</p>
+                <ol>
+                    <li>Buka menu "Tools"</li>
+                    <li>Pilih "Keyboard Shortcuts"</li>
+                    <li>Klik shortcut yang ingin diubah</li>
+                    <li>Tekan kombinasi key baru yang ingin digunakan</li>
+                    <li>Klik "Apply" untuk menyimpan perubahan</li>
+                </ol>
+            </section>
+            
+            <section id="batch-processing">
+                <h2>Batch Processing</h2>
+                <p>Film Translator Generator memungkinkan pemrosesan batch untuk beberapa video sekaligus.</p>
+                
+                <h3>Mengatur Batch Processing</h3>
+                <ol>
+                    <li>Tambahkan beberapa video ke antrian</li>
+                    <li>Atur semua parameter yang diinginkan (bahasa target, model, dll.)</li>
+                    <li>Klik menu "Processing" lalu pilih "Process All Videos"</li>
+                </ol>
+                
+                <h3>Opsi Batch Processing</h3>
+                <ul>
+                    <li><strong>Sequential Processing</strong>: Proses video satu per satu (default)</li>
+                    <li><strong>Parallel Processing</strong>: Proses beberapa video sekaligus (perlu perangkat keras yang lebih kuat)</li>
+                    <li><strong>Auto Save</strong>: Simpan hasil otomatis ke file setelah pemrosesan</li>
+                </ul>
+                
+                <div class="note">
+                    <p>Parallel processing membutuhkan lebih banyak sumber daya sistem dan mungkin tidak stabil pada perangkat dengan spesifikasi rendah.</p>
+                </div>
+            </section>
+            
+            <section id="translation-memory">
+                <h2>Translation Memory</h2>
+                <p>Translation Memory memungkinkan Film Translator Generator menggunakan hasil terjemahan sebelumnya untuk meningkatkan konsistensi dan mengurangi biaya API.</p>
+                
+                <h3>Cara Kerja Translation Memory</h3>
+                <p>Saat Anda menerjemahkan segment, sistem akan:</p>
+                <ol>
+                    <li>Menyimpan pasangan teks sumber dan terjemahan</li>
+                    <li>Mencari kecocokan saat ada teks serupa di masa depan</li>
+                    <li>Menggunakan terjemahan yang tersimpan jika kecocokan melebihi threshold tertentu</li>
+                </ol>
+                
+                <h3>Mengonfigurasi Translation Memory</h3>
+                <p>Anda dapat menyesuaikan pengaturan Translation Memory di bagian Advanced Settings:</p>
+                <ul>
+                    <li><strong>Threshold</strong>: Atur tingkat kecocokan minimum (default: 90%)</li>
+                    <li><strong>Import/Export</strong>: Impor atau ekspor TM Database</li>
+                    <li><strong>Clear Memory</strong>: Hapus semua entri dari Translation Memory</li>
+                </ul>
+            </section>
+            
+            <section id="custom-preprocessing">
+                <h2>Custom Preprocessing</h2>
+                <p>Film Translator Generator mendukung preprocessing kustom untuk hasil yang lebih baik.</p>
+                
+                <h3>Preprocessing Audio</h3>
+                <ul>
+                    <li><strong>Noise Reduction</strong>: Kurangi noise background untuk transkripsi yang lebih akurat</li>
+                    <li><strong>Audio Normalization</strong>: Sesuaikan level audio untuk konsistensi</li>
+                    <li><strong>Channel Selection</strong>: Pilih saluran audio spesifik untuk transkripsi</li>
+                </ul>
+                
+                <h3>Preprocessing Text</h3>
+                <ul>
+                    <li><strong>Text Normalization</strong>: Standarisasi teks sebelum terjemahan</li>
+                    <li><strong>Custom Replacements</strong>: Atur penggantian teks kustom</li>
+                    <li><strong>Prompt Templates</strong>: Kustomisasi prompt untuk model terjemahan</li>
+                </ul>
+                
+                <h3>Mengakses Preprocessing Settings</h3>
+                <p>Untuk mengakses pengaturan preprocessing:</p>
+                <ol>
+                    <li>Buka menu "Settings"</li>
+                    <li>Pilih "Advanced Settings"</li>
+                    <li>Navigasi ke tab "Preprocessing"</li>
+                </ol>
+            </section>
+            
+            <section id="project-management">
+                <h2>Project Management</h2>
+                <p>Film Translator Generator menyediakan manajemen proyek yang komprehensif untuk mengatur dan melacak pekerjaan terjemahan Anda.</p>
+                
+                <h3>Struktur Project</h3>
+                <p>Project (.ftgproj) menyimpan informasi berikut:</p>
+                <ul>
+                    <li><strong>Video Queue</strong>: Daftar file video yang ditambahkan</li>
+                    <li><strong>Processing Status</strong>: Status setiap file dalam antrian</li>
+                    <li><strong>Transcription Data</strong>: Hasil transkripsi untuk setiap video</li>
+                    <li><strong>Translation Data</strong>: Hasil terjemahan untuk setiap video</li>
+                    <li><strong>Styling Settings</strong>: Pengaturan styling subtitle</li>
+                    <li><strong>Output Settings</strong>: Format output dan opsi lainnya</li>
+                </ul>
+                
+                <h3>Project Backup & Recovery</h3>
+                <p>Film Translator Generator melakukan backup otomatis dari proyek Anda dengan:</p>
+                <ul>
+                    <li><strong>Auto Save</strong>: Simpan proyek pada interval tertentu</li>
+                    <li><strong>Backup Files</strong>: Buat file cadangan dengan timestamp</li>
+                    <li><strong>Project Recovery</strong>: Pulihkan dari backup jika terjadi crash</li>
+                </ul>
+                
+                <div class="note">
+                    <p>File proyek (.ftgproj) mengenkripsi semua API key dengan aman, sehingga dapat dibagikan tanpa risiko keamanan.</p>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>&copy; 2025 Film Translator Generator. Dokumentasi untuk Film Translator Generator versi 3.0.0-RC1.</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 

@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [3.0.0-ALPHA 1] - 2025-06-01
+## [3.0.0-ALPHA 1] - 2025-06-01 (Stable Release Target date)
 
 ### Added
 - **Complete UI Framework Migration**: Rebuilt the entire application using PySide6 (Qt) framework, replacing the previous Tkinter implementation:

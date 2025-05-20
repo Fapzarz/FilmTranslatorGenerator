@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Film Translator Generator - Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Film Translator Generator</h1>
+            <p class="version">Version 3.0.0-RC1</p>
+        </header>
+        
+        <nav>
+            <ul>
+                <li><a href="#getting-started">Getting Started</a></li>
+                <li><a href="#transcription">Transcription</a></li>
+                <li><a href="#translation">Translation</a></li>
+                <li><a href="#subtitle-styling">Subtitle Styling</a></li>
+                <li><a href="advanced.html">Advanced Features</a></li>
+                <li><a href="api.html">API Configuration</a></li>
+                <li><a href="troubleshooting.html">Troubleshooting</a></li>
+            </ul>
+        </nav>
+        
+        <main>
+            <section id="overview">
+                <h2>Overview</h2>
+                <p>Film Translator Generator adalah aplikasi untuk melakukan transkripsi dan penerjemahan otomatis file video. Ini menggunakan Faster-Whisper untuk transkripsi dan berbagai model AI untuk terjemahan.</p>
+                
+                <div class="feature-grid">
+                    <div class="feature">
+                        <h3>Transkripsi Otomatis</h3>
+                        <p>Menggunakan Faster-Whisper untuk transcribe dialog dari video dengan akurasi tinggi</p>
+                    </div>
+                    <div class="feature">
+                        <h3>Terjemahan AI</h3>
+                        <p>Mendukung Gemini, OpenAI, Anthropic, dan DeepSeek untuk terjemahan berkualitas tinggi</p>
+                    </div>
+                    <div class="feature">
+                        <h3>Editor Subtitle</h3>
+                        <p>Editor built-in untuk melakukan penyesuaian pada terjemahan</p>
+                    </div>
+                    <div class="feature">
+                        <h3>Styling Subtitle</h3>
+                        <p>Kustomisasi tampilan subtitle dengan berbagai opsi styling</p>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="getting-started">
+                <h2>Getting Started</h2>
+                <p>Panduan langkah demi langkah untuk memulai dengan Film Translator Generator:</p>
+                
+                <h3>Persyaratan Sistem</h3>
+                <ul>
+                    <li>Windows 10 atau lebih baru (dukungan Linux dan macOS masih dalam pengembangan)</li>
+                    <li>Minimum 4GB RAM (8GB atau lebih direkomendasikan)</li>
+                    <li>Untuk akselerasi GPU: NVIDIA dengan dukungan CUDA (opsional)</li>
+                    <li>Python 3.8 atau lebih baru</li>
+                    <li>FFmpeg terinstal dan tersedia di PATH</li>
+                </ul>
+                
+                <h3>Instalasi</h3>
+                <ol>
+                    <li>Clone atau download repository dari GitHub</li>
+                    <li>Install dependencies dengan perintah:
+                        <pre><code>pip install -r requirements.txt</code></pre>
+                    </li>
+                    <li>Jalankan aplikasi dengan perintah:
+                        <pre><code>python main.py</code></pre>
+                    </li>
+                </ol>
+                
+                <h3>Memulai Proyek Baru</h3>
+                <ol>
+                    <li>Klik "Add Video(s)" untuk menambahkan video ke antrian</li>
+                    <li>Pilih bahasa target dan model AI untuk terjemahan</li>
+                    <li>Klik "Process Selected Video" untuk memulai transkripsi dan terjemahan</li>
+                    <li>Setelah selesai, teks terjemahan akan ditampilkan dan dapat diedit atau disimpan</li>
+                </ol>
+            </section>
+            
+            <section id="transcription">
+                <h2>Transcription</h2>
+                <p>Film Translator Generator menggunakan Faster-Whisper (implementasi optimized dari OpenAI Whisper) untuk transkripsi yang cepat dan akurat.</p>
+                
+                <h3>Model Whisper</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Ukuran</th>
+                            <th>Kualitas</th>
+                            <th>RAM yang Dibutuhkan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>tiny</td>
+                            <td>~75 MB</td>
+                            <td>Dasar</td>
+                            <td>~1 GB</td>
+                        </tr>
+                        <tr>
+                            <td>base</td>
+                            <td>~150 MB</td>
+                            <td>Baik</td>
+                            <td>~1 GB</td>
+                        </tr>
+                        <tr>
+                            <td>small</td>
+                            <td>~500 MB</td>
+                            <td>Sangat Baik</td>
+                            <td>~2 GB</td>
+                        </tr>
+                        <tr>
+                            <td>medium</td>
+                            <td>~1.5 GB</td>
+                            <td>Hampir Terbaik</td>
+                            <td>~5 GB</td>
+                        </tr>
+                        <tr>
+                            <td>large-v2</td>
+                            <td>~3 GB</td>
+                            <td>Terbaik</td>
+                            <td>~10 GB</td>
+                        </tr>
+                        <tr>
+                            <td>large-v3</td>
+                            <td>~3 GB</td>
+                            <td>Terbaru & Terbaik</td>
+                            <td>~10 GB</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3>Opsi Device</h3>
+                <ul>
+                    <li><strong>CUDA</strong>: Gunakan GPU NVIDIA untuk akselerasi transkripsi (jauh lebih cepat)</li>
+                    <li><strong>CPU</strong>: Jika tidak memiliki GPU, transkripsi akan berjalan pada CPU (lebih lambat)</li>
+                </ul>
+                
+                <h3>Compute Type</h3>
+                <p>Pilihan compute type mempengaruhi kecepatan dan penggunaan memori:</p>
+                <ul>
+                    <li><strong>float16</strong>: Precision penuh, rekomendasi untuk GPU</li>
+                    <li><strong>int8_float16</strong>: Precision campuran, lebih hemat memori</li>
+                    <li><strong>int8</strong>: Precision terendah, paling hemat memori</li>
+                    <li><strong>float32</strong>: Untuk CPU</li>
+                </ul>
+            </section>
+            
+            <section id="translation">
+                <h2>Translation</h2>
+                <p>Film Translator Generator mendukung beberapa model AI untuk terjemahan:</p>
+                
+                <h3>Provider AI yang Didukung</h3>
+                <ul>
+                    <li><strong>Gemini AI</strong>: Model Google terbaru (Gemini Flash, Gemini Pro)</li>
+                    <li><strong>OpenAI</strong>: GPT 3.5, GPT-4, GPT-4o, dll</li>
+                    <li><strong>Anthropic</strong>: Claude 3 Opus, Sonnet, Haiku</li>
+                    <li><strong>DeepSeek</strong>: DeepSeek Chat</li>
+                </ul>
+                
+                <h3>Pengaturan Terjemahan</h3>
+                <p>Anda dapat mengatur beberapa parameter untuk mengoptimalkan hasil terjemahan:</p>
+                <ul>
+                    <li><strong>Batch Size</strong>: Jumlah segmen yang diterjemahkan sekaligus (default: 500)</li>
+                    <li><strong>Temperature</strong>: Mengontrol kreativitas output (0.0-1.0)</li>
+                    <li><strong>Top P</strong>: Mengontrol determinisme output (0.0-1.0)</li>
+                    <li><strong>Top K</strong>: Filter jumlah token untuk sampling</li>
+                </ul>
+                
+                <p class="note">Catatan: Setiap provider membutuhkan API key masing-masing. Lihat <a href="api.html">Konfigurasi API</a> untuk petunjuk lebih lanjut.</p>
+            </section>
+            
+            <section id="subtitle-styling">
+                <h2>Subtitle Styling</h2>
+                <p>Film Translator Generator menawarkan berbagai opsi untuk styling subtitle:</p>
+                
+                <h3>Opsi Styling</h3>
+                <ul>
+                    <li><strong>Font</strong>: Arial, Helvetica, Times New Roman, Verdana, Tahoma, Impact</li>
+                    <li><strong>Warna</strong>: Putih, Kuning, Cyan, Lime, Pink, Light Gray</li>
+                    <li><strong>Ukuran</strong>: 12px hingga 32px</li>
+                    <li><strong>Posisi</strong>: Bawah, Tengah, Atas</li>
+                    <li><strong>Outline</strong>: Warna dan ketebalan outline</li>
+                    <li><strong>Background</strong>: Warna latar dan transparansi</li>
+                </ul>
+                
+                <p>Setelah menerapkan style, Anda dapat melihat pratinjau dan menyimpan dalam format yang didukung.</p>
+                
+                <h3>Format Output</h3>
+                <ul>
+                    <li><strong>SRT</strong>: Format subtitle standar yang didukung banyak pemutar video</li>
+                    <li><strong>VTT</strong>: Web Video Text Tracks, untuk streaming web</li>
+                    <li><strong>TXT</strong>: Teks biasa dengan timestamp</li>
+                </ul>
+            </section>
+        </main>
+        
+        <footer>
+            <p>&copy; 2025 Film Translator Generator. Dokumentasi untuk Film Translator Generator versi 3.0.0-RC1.</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
