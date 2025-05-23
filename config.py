@@ -64,30 +64,29 @@ AUTO_SAVE_OPTIONS = ["On", "Off"]
 
 # --- App Info ---
 APP_NAME = "Film Translator Generator"
-APP_TITLE = f"{APP_NAME} 3.0.0-RC1"
-APP_VERSION = "3.0.0-RC1"
+APP_TITLE = f"{APP_NAME} 3.0.0"
+APP_VERSION = "3.0.0"
 GITHUB_URL = "https://github.com/Fapzarz/FilmTranslatorGenerator"
 
 # --- Default Keyboard Shortcuts ---
 # Format: "ActionName": "ShortcutString"
-# ShortcutString format: e.g., "Control-o", "Alt-F4", "Shift-Return"
-# Gunakan nama key seperti yang dikenal Tkinter: 
-# https://www.tcl.tk/man/tcl8.6/TkCmd/keysyms.htm (tanpa prefix XK_)
-# Modifier: Control, Mod1 (Alt), Shift, Mod2, Mod3, Mod4, Mod5, Lock, Extended
+# ShortcutString format: e.g., "Ctrl+O", "Alt+F4", "Shift+Return"
+# Uses Qt standard key sequences and modifiers
+# Modifier: Ctrl, Alt, Shift, Meta, etc.
 DEFAULT_SHORTCUTS = {
-    "add_videos_to_queue": "Control-o",         # O untuk Open/Add
+    "add_videos_to_queue": "Ctrl+O",         # O untuk Open/Add
     "remove_selected_video": "Delete",
-    "clear_video_queue": "Control-Shift-Delete",
-    "start_processing": "Control-p",          # P untuk Process
-    "save_project": "Control-s",              # S untuk Save
-    "save_project_as": "Control-Shift-S",
-    "load_project": "Control-l",              # L untuk Load
-    "save_subtitles": "Control-Alt-S",
-    "copy_output_to_clipboard": "Control-c",
-    "apply_editor_changes": "Control-Return", # Atau Control-E (Execute/Enter)
-    "open_advanced_settings": "Control-comma", # Koma sering digunakan untuk settings
+    "clear_video_queue": "Ctrl+Shift+Delete",
+    "start_processing": "Ctrl+P",          # P untuk Process
+    "save_project": "Ctrl+S",              # S untuk Save
+    "save_project_as": "Ctrl+Shift+S",
+    "load_project": "Ctrl+L",              # L untuk Load
+    "save_subtitles": "Ctrl+Alt+S",
+    "copy_output_to_clipboard": "Ctrl+C",
+    "apply_editor_changes": "Ctrl+Return", # Atau Ctrl+E (Execute/Enter)
+    "open_advanced_settings": "Ctrl+,", # Koma sering digunakan untuk settings
     "show_about_dialog": "F1", 
-    "exit_application": "Alt-F4" # Hati-hati dengan ini, mungkin lebih baik tidak ada default atau yang tidak mudah terpicu
+    "exit_application": "Alt+F4" # Hati-hati dengan ini, mungkin lebih baik tidak ada default atau yang tidak mudah terpicu
 }
 
 # --- Gemini API specific settings ---
