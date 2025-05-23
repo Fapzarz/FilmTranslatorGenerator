@@ -251,25 +251,25 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [3.0.0] - 2025-01-31
 
-### Added
-- **Integrated Security System**: All security functions moved from standalone script to `utils/crypto.py`
-- **Comprehensive Cryptographic Module**: Complete module documentation with security features
-- **Automated Security Checks**: Built-in API key protection and vulnerability detection
+### Ditambahkan
+- ** Sistem Keamanan Terpadu **: Semua fungsi keamanan dipindahkan dari skrip mandiri ke `utils/crypto.py`
+- ** Modul Kriptografi Komprehensif **: Dokumentasi Modul Lengkap dengan Fitur Keamanan
+- ** Pemeriksaan Keamanan Otomatis **: Perlindungan kunci API bawaan dan deteksi kerentanan
 
-### Changed  
-- **Security Architecture**: Consolidated security functions into crypto module for better organization
-- **Code Structure**: Improved modularity with cleaner separation of concerns
-- **Documentation**: Enhanced crypto module documentation with complete function descriptions
+### diubah
+- ** Arsitektur Keamanan **: Fungsi Keamanan Konsolidasi menjadi Modul Crypto untuk Organisasi yang Lebih Baik
+- ** Struktur kode **: Modularitas yang ditingkatkan dengan pemisahan kekhawatiran yang lebih bersih
+- ** Dokumentasi **: Dokumentasi Modul Crypto yang Ditingkatkan dengan Deskripsi Fungsi Lengkap
 
-### Fixed
-- **Security Vulnerabilities**: Resolved all exposed API key issues automatically
-- **Code Organization**: Eliminated standalone security files for cleaner project structure
-- **Import Dependencies**: Added missing `anthropic` dependency to requirements.txt
+### Tetap
+- ** Kerentanan Keamanan **: Menyelesaikan semua masalah kunci API yang terpapar secara otomatis
+- ** Organisasi kode **: Menghilangkan file keamanan mandiri untuk struktur proyek yang lebih bersih
+- ** Dependensi Impor **: Menambahkan ketergantungan `antropik` yang hilang ke persyaratan.txt
 
-### Security
-- **API Key Encryption**: All API keys now automatically encrypted using machine-specific keys
-- **Vulnerability Prevention**: Proactive security scanning and automatic fixes
-- **Zero Configuration Security**: Security features work out-of-the-box without user intervention
+### Keamanan
+- ** Enkripsi Kunci API **: Semua tombol API sekarang secara otomatis dienkripsi menggunakan tombol spesifik mesin
+- ** Pencegahan Kerentanan **: Pemindaian Keamanan Proaktif dan Perbaikan Otomatis
+-** Keamanan Konfigurasi Nol **: Fitur Keamanan Bekerja di luar kotak tanpa intervensi pengguna
 
 ## [3.0.0-RC1] - 2025-05-20
 
