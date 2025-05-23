@@ -14,10 +14,12 @@ Requirements:
     FFMPEG must be installed and in the system PATH
     For GPU acceleration, CUDA and cuDNN must be properly installed
 """
-# import tkinter as tk # No longer needed for root creation here
-from gui.app import AppGUI
+import sys
+from PySide6.QtWidgets import QApplication
+from qt_app import QtAppGUI
 
 if __name__ == "__main__":
-    # root = tk.Tk() # Old root creation
-    app = AppGUI() # AppGUI now creates its own TkinterDnD root
-    app.root.mainloop() # Call mainloop on the root created by AppGUI 
+    app = QApplication(sys.argv)
+    window = QtAppGUI()
+    window.show()
+    sys.exit(app.exec()) 

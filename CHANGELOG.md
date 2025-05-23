@@ -10,7 +10,44 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [3.0.0-ALPHA 1] - 2025-06-01 (Stable Release Target date)
+## [3.0.0] - 2025-01-31
+
+### Added
+- **Integrated Security System**: All security functions moved from standalone script to `utils/crypto.py`
+- **Comprehensive Cryptographic Module**: Complete module documentation with security features
+- **Automated Security Checks**: Built-in API key protection and vulnerability detection
+
+### Changed  
+- **Security Architecture**: Consolidated security functions into crypto module for better organization
+- **Code Structure**: Improved modularity with cleaner separation of concerns
+- **Documentation**: Enhanced crypto module documentation with complete function descriptions
+
+### Fixed
+- **Security Vulnerabilities**: Resolved all exposed API key issues automatically
+- **Code Organization**: Eliminated standalone security files for cleaner project structure
+- **Import Dependencies**: Added missing `anthropic` dependency to requirements.txt
+
+### Security
+- **API Key Encryption**: All API keys now automatically encrypted using machine-specific keys
+- **Vulnerability Prevention**: Proactive security scanning and automatic fixes
+- **Zero Configuration Security**: Security features work out-of-the-box without user intervention
+
+## [3.0.0-RC1] - 2025-05-20
+
+### Added
+- Dokumentasi lengkap dalam format HTML dengan panduan API, fitur lanjutan, dan troubleshooting
+- Implementasi enkripsi API key untuk keamanan data sensitif
+- Validasi input yang komprehensif di seluruh aplikasi
+
+### Changed
+- Refaktorisasi kode dengan memisahkan modul berdasarkan fungsi terkait
+- Pembaruan antarmuka pengguna dengan tampilan yang lebih modern
+
+### Fixed
+- Masalah keamanan dengan penyimpanan API key
+- Berbagai bug dan peningkatan stabilitas aplikasi
+
+## [3.0.0-ALPHA 1] - 2025-05-19
 
 ### Added
 - **Complete UI Framework Migration**: Rebuilt the entire application using PySide6 (Qt) framework, replacing the previous Tkinter implementation:
@@ -212,7 +249,44 @@ Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [3.0.0-ALPHA 1] - 2025-06-01
+## [3.0.0] - 2025-01-31
+
+### Added
+- **Integrated Security System**: All security functions moved from standalone script to `utils/crypto.py`
+- **Comprehensive Cryptographic Module**: Complete module documentation with security features
+- **Automated Security Checks**: Built-in API key protection and vulnerability detection
+
+### Changed  
+- **Security Architecture**: Consolidated security functions into crypto module for better organization
+- **Code Structure**: Improved modularity with cleaner separation of concerns
+- **Documentation**: Enhanced crypto module documentation with complete function descriptions
+
+### Fixed
+- **Security Vulnerabilities**: Resolved all exposed API key issues automatically
+- **Code Organization**: Eliminated standalone security files for cleaner project structure
+- **Import Dependencies**: Added missing `anthropic` dependency to requirements.txt
+
+### Security
+- **API Key Encryption**: All API keys now automatically encrypted using machine-specific keys
+- **Vulnerability Prevention**: Proactive security scanning and automatic fixes
+- **Zero Configuration Security**: Security features work out-of-the-box without user intervention
+
+## [3.0.0-RC1] - 2025-05-20
+
+### Added
+- Dokumentasi lengkap dalam format HTML dengan panduan API, fitur lanjutan, dan troubleshooting
+- Implementasi enkripsi API key untuk keamanan data sensitif
+- Validasi input yang komprehensif di seluruh aplikasi
+
+### Changed
+- Refaktorisasi kode dengan memisahkan modul berdasarkan fungsi terkait
+- Pembaruan antarmuka pengguna dengan tampilan yang lebih modern
+
+### Fixed
+- Masalah keamanan dengan penyimpanan API key
+- Berbagai bug dan peningkatan stabilitas aplikasi
+
+## [3.0.0-ALPHA 1] - 2025-05-19
 
 ### Added
 - **Migrasi Framework UI Lengkap**: Membangun ulang seluruh aplikasi menggunakan framework PySide6 (Qt), menggantikan implementasi Tkinter sebelumnya:

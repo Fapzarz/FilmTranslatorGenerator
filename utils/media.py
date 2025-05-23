@@ -4,7 +4,7 @@ Video and media handling utilities.
 import os
 import platform
 import subprocess
-from PIL import Image, ImageTk
+from PIL import Image
 import sys
 import tempfile
 from pathlib import Path
@@ -114,15 +114,15 @@ def get_video_info(video_path):
     """
     if not os.path.exists(video_path):
         return {
-            'duration': 'N/A',
-            'size': 'N/A',
+        'duration': 'N/A',
+        'size': 'N/A',
             'width': 'N/A', 
             'height': 'N/A', 
             'format': 'N/A',
             'video_codec': 'N/A',
             'audio_codec': 'N/A',
             'bitrate': 'N/A'
-        }
+    }
     
     try:
         # Get general format information (includes duration, bitrate)
