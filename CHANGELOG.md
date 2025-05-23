@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [3.0.0] - 2025-01-31
+## [3.0.0] - 2025-05-23
 
 ### Added
 - **Integrated Security System**: All security functions moved from standalone script to `utils/crypto.py`
