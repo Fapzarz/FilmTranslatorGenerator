@@ -40,8 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Security Vulnerabilities**: Resolved all exposed API key issues automatically
 - **Code Organization**: Eliminated standalone security files for cleaner project structure
 - **Import Dependencies**: Added missing `anthropic` dependency to requirements.txt
-- **API Key Encryption Bug**: Fixed critical issue where encrypted API keys were sent to APIs without decryption
-- **Configuration Save Process**: Ensured qt_app.py uses the secure save_config function for proper encryption handling
+- **API Key Encryption Bug**: Fixed critical issue where encrypted API keys were sent to APIs without decryption- **Configuration Save Process**: Ensured qt_app.py uses the secure save_config function for proper encryption handling- **Configuration Load Process**: Fixed qt_app.py to use secure load_config function preventing API key validation failures after restart
 
 ### Security
 - **API Key Encryption**: All API keys now automatically encrypted using machine-specific keys
@@ -296,8 +295,7 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Kerentanan Keamanan**: Menyelesaikan semua masalah API key yang terekspos secara otomatis
 - **Organisasi Kode**: Menghilangkan file keamanan mandiri untuk struktur proyek yang lebih bersih
 - **Dependensi Import**: Menambahkan dependensi `anthropic` yang hilang ke requirements.txt
-- **Bug Enkripsi API Key**: Memperbaiki masalah kritis dimana API key terenkripsi dikirim ke API tanpa dekripsi
-- **Proses Penyimpanan Konfigurasi**: Memastikan qt_app.py menggunakan fungsi save_config yang aman untuk penanganan enkripsi yang tepat
+- **Bug Enkripsi API Key**: Memperbaiki masalah kritis dimana API key terenkripsi dikirim ke API tanpa dekripsi- **Proses Penyimpanan Konfigurasi**: Memastikan qt_app.py menggunakan fungsi save_config yang aman untuk penanganan enkripsi yang tepat- **Proses Pemuatan Konfigurasi**: Memperbaiki qt_app.py untuk menggunakan fungsi load_config yang aman mencegah kegagalan validasi API key setelah restart
 
 ### Keamanan
 - **Enkripsi API Key**: Semua API key sekarang otomatis dienkripsi menggunakan kunci spesifik mesin

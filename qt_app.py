@@ -508,73 +508,72 @@ class QtAppGUI(QMainWindow):
         advanced_subtitle_editor_action.triggered.connect(self.open_advanced_subtitle_editor)
         tools_menu.addAction(advanced_subtitle_editor_action)
     
-    # Core functionality methods - update to use manager implementations
     def _load_config(self):
-        """Load configuration from JSON file or use defaults."""
+        """Load configuration using the secure load_config function."""
         self.log_status("Loading configuration...")
         try:
-            if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                
-                # Apply saved configuration
-                self.target_language = config.get('target_language', self.target_language)
-                self.whisper_model_name = config.get('whisper_model', self.whisper_model_name)
-                self.device = config.get('device', self.device)
-                self.compute_type = config.get('compute_type', self.compute_type)
-                self.theme = config.get('theme', self.theme)
-                self.accent_color = config.get('accent_color', self.accent_color)
-                self.batch_size = config.get('batch_size', self.batch_size)
-                self.output_format = config.get('output_format', self.output_format)
-                self.preview_enabled = config.get('preview', self.preview_enabled)
-                self.auto_save_enabled = config.get('auto_save', self.auto_save_enabled)
-                
-                # Load translation provider settings
-                self.translation_provider = config.get('translation_provider', self.translation_provider)
-                self.gemini_api_key = config.get('gemini_api_key', self.gemini_api_key)
-                self.openai_api_key = config.get('openai_api_key', self.openai_api_key)
-                self.anthropic_api_key = config.get('anthropic_api_key', self.anthropic_api_key)
-                self.deepseek_api_key = config.get('deepseek_api_key', self.deepseek_api_key)
-                self.gemini_model = config.get('gemini_model', self.gemini_model)
-                self.openai_model = config.get('openai_model', self.openai_model)
-                self.anthropic_model = config.get('anthropic_model', self.anthropic_model)
-                
-                # Load Gemini model parameters
-                self.gemini_temperature = config.get('gemini_temperature', self.gemini_temperature)
-                self.gemini_top_p = config.get('gemini_top_p', self.gemini_top_p)
-                self.gemini_top_k = config.get('gemini_top_k', self.gemini_top_k)
-                
-                # Load subtitle style settings
-                self.subtitle_font = config.get('subtitle_font', self.subtitle_font)
-                self.subtitle_color = config.get('subtitle_color', self.subtitle_color)
-                self.subtitle_size = config.get('subtitle_size', self.subtitle_size)
-                self.subtitle_position = config.get('subtitle_position', self.subtitle_position)
-                self.subtitle_outline_color = config.get('subtitle_outline_color', self.subtitle_outline_color)
-                self.subtitle_outline_width = config.get('subtitle_outline_width', self.subtitle_outline_width)
-                self.subtitle_bg_color = config.get('subtitle_bg_color', self.subtitle_bg_color)
-                self.subtitle_bg_opacity = config.get('subtitle_bg_opacity', self.subtitle_bg_opacity)
-                
-                # Load processed file data
-                self.processed_file_data = config.get('processed_file_data', {})
-                
-                # Populate video_queue from processed_file_data keys
-                self.video_queue = list(self.processed_file_data.keys())
+            # Import the secure load_config function
+            from config import load_config
+            
+            # Use the secure load_config function that handles decryption
+            config = load_config()
+            
+            # Apply loaded configuration
+            self.target_language = config.get('target_language', self.target_language)
+            self.whisper_model_name = config.get('whisper_model', self.whisper_model_name)
+            self.device = config.get('device', self.device)
+            self.compute_type = config.get('compute_type', self.compute_type)
+            self.theme = config.get('theme', self.theme)
+            self.accent_color = config.get('accent_color', self.accent_color)
+            self.batch_size = config.get('batch_size', self.batch_size)
+            self.output_format = config.get('output_format', self.output_format)
+            self.preview_enabled = config.get('preview', self.preview_enabled)
+            self.auto_save_enabled = config.get('auto_save', self.auto_save_enabled)
+            
+            # Load translation provider settings (API keys will be automatically decrypted)
+            self.translation_provider = config.get('translation_provider', self.translation_provider)
+            self.gemini_api_key = config.get('gemini_api_key', self.gemini_api_key)
+            self.openai_api_key = config.get('openai_api_key', self.openai_api_key)
+            self.anthropic_api_key = config.get('anthropic_api_key', self.anthropic_api_key)
+            self.deepseek_api_key = config.get('deepseek_api_key', self.deepseek_api_key)
+            self.gemini_model = config.get('gemini_model', self.gemini_model)
+            self.openai_model = config.get('openai_model', self.openai_model)
+            self.anthropic_model = config.get('anthropic_model', self.anthropic_model)
+            
+            # Load Gemini model parameters
+            self.gemini_temperature = config.get('gemini_temperature', self.gemini_temperature)
+            self.gemini_top_p = config.get('gemini_top_p', self.gemini_top_p)
+            self.gemini_top_k = config.get('gemini_top_k', self.gemini_top_k)
+            
+            # Load subtitle style settings
+            self.subtitle_font = config.get('subtitle_font', self.subtitle_font)
+            self.subtitle_color = config.get('subtitle_color', self.subtitle_color)
+            self.subtitle_size = config.get('subtitle_size', self.subtitle_size)
+            self.subtitle_position = config.get('subtitle_position', self.subtitle_position)
+            self.subtitle_outline_color = config.get('subtitle_outline_color', self.subtitle_outline_color)
+            self.subtitle_outline_width = config.get('subtitle_outline_width', self.subtitle_outline_width)
+            self.subtitle_bg_color = config.get('subtitle_bg_color', self.subtitle_bg_color)
+            self.subtitle_bg_opacity = config.get('subtitle_bg_opacity', self.subtitle_bg_opacity)
+            
+            # Load processed file data
+            self.processed_file_data = config.get('processed_file_data', {})
+            
+            # Populate video_queue from processed_file_data keys
+            self.video_queue = list(self.processed_file_data.keys())
 
-                # Update UI with loaded settings
-                self.language_combo.setCurrentText(self.target_language)
-                self.whisper_model_combo.setCurrentText(self.whisper_model_name)
-                self.output_format_combo.setCurrentText(self.output_format)
-                
-                # Apply the saved theme
-                self.apply_theme(self.theme)
-                
-                # Load queue from config after other settings are applied
-                if hasattr(self, 'queue_manager'): # Ensure queue_manager is initialized
-                    self.queue_manager.load_queue_from_config()
+            # Update UI with loaded settings
+            self.language_combo.setCurrentText(self.target_language)
+            self.whisper_model_combo.setCurrentText(self.whisper_model_name)
+            self.output_format_combo.setCurrentText(self.output_format)
+            
+            # Apply the saved theme
+            self.apply_theme(self.theme)
+            
+            # Load queue from config after other settings are applied
+            if hasattr(self, 'queue_manager'): # Ensure queue_manager is initialized
+                self.queue_manager.load_queue_from_config()
 
-                self.log_status("Configuration loaded successfully.")
-            else:
-                self.log_status("No configuration file found. Using defaults.")
+            self.log_status("Configuration loaded successfully.")
         except Exception as e:
             self.log_status(f"Error loading configuration: {e}", "ERROR")
     
