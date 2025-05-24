@@ -579,9 +579,12 @@ class QtAppGUI(QMainWindow):
             self.log_status(f"Error loading configuration: {e}", "ERROR")
     
     def _save_config(self):
-        """Save current configuration to JSON file."""
+        """Save current configuration to JSON file using the secure save_config function."""
         self.log_status("Saving configuration...")
         try:
+            # Import the secure save_config function
+            from config import save_config
+            
             # Update variables from UI
             self.target_language = self.language_combo.currentText()
             self.whisper_model_name = self.whisper_model_combo.currentText()
@@ -620,8 +623,8 @@ class QtAppGUI(QMainWindow):
                 'processed_file_data': self.processed_file_data
             }
             
-            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(config, f, indent=4)
+            # Use the secure save_config function that handles encryption
+            save_config(config)
             
             self.log_status("Configuration saved successfully.")
         except Exception as e:

@@ -30,20 +30,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Error notifications with detailed troubleshooting info
   - Configurable notification preferences and urgency levels
 
-### Changed  
+### Changed
 - **Security Architecture**: Consolidated security functions into crypto module for better organization
 - **Code Structure**: Improved modularity with cleaner separation of concerns
 - **Documentation**: Enhanced crypto module documentation with complete function descriptions
+- **Configuration Management**: Improved config save/load to use secure encryption functions consistently
 
 ### Fixed
 - **Security Vulnerabilities**: Resolved all exposed API key issues automatically
 - **Code Organization**: Eliminated standalone security files for cleaner project structure
 - **Import Dependencies**: Added missing `anthropic` dependency to requirements.txt
+- **API Key Encryption Bug**: Fixed critical issue where encrypted API keys were sent to APIs without decryption
+- **Configuration Save Process**: Ensured qt_app.py uses the secure save_config function for proper encryption handling
 
 ### Security
 - **API Key Encryption**: All API keys now automatically encrypted using machine-specific keys
 - **Vulnerability Prevention**: Proactive security scanning and automatic fixes
 - **Zero Configuration Security**: Security features work out-of-the-box without user intervention
+- **Encryption Consistency**: Fixed double encryption and decryption issues for reliable API key handling
 
 ## [3.0.0-RC1] - 2025-05-20
 
@@ -268,32 +272,38 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - ** Sistem Keamanan Terpadu **: Semua fungsi keamanan dipindahkan dari skrip mandiri ke `utils/crypto.py`
 - ** Modul Kriptografi Komprehensif **: Dokumentasi Modul Lengkap dengan Fitur Keamanan
 - ** Pemeriksaan Keamanan Otomatis **: Perlindungan kunci API bawaan dan deteksi kerentanan
-- **Model Anthropic Terbaru**: Menambahkan dukungan untuk model Claude-4 series:  - `claude-opus-4-20250514` - Model Claude 4 Opus terbaru  - `claude-sonnet-4-20250514` - Model Claude 4 Sonnet terbaru- **Optimasi GPU Lanjutan**: Peningkatan akselerasi GPU yang komprehensif:  - Deteksi hardware real-time dan rekomendasi pengaturan optimal  - Manajemen memori otomatis dan pembersihan  - Monitoring performa dengan analitik detail dan saran  - Optimasi batch size cerdas berdasarkan memori GPU tersedia- **Sistem Notifikasi Windows**: Integrasi notifikasi Windows asli:  - Notifikasi penyelesaian processing dengan alert suara  - Statistik penyelesaian queue dan informasi waktu  - Notifikasi error dengan info troubleshooting detail  - Preferensi notifikasi yang dapat dikonfigurasi dan tingkat urgensi
-- **Advanced GPU Optimization**: Comprehensive GPU acceleration enhancements:
-  - Real-time hardware detection and optimal settings recommendation
-  - Automatic memory management and cleanup
-  - Performance monitoring with detailed analytics and suggestions
-  - Smart batch size optimization based on available GPU memory
-- **Windows Notifications System**: Native Windows notification integration:
-  - Processing completion notifications with sound alerts
-  - Queue completion statistics and timing information
-  - Error notifications with detailed troubleshooting info
-  - Configurable notification preferences and urgency levels
+- **Model Anthropic Terbaru**: Menambahkan dukungan untuk model Claude-4 series:
+  - `claude-opus-4-20250514` - Model Claude 4 Opus terbaru
+  - `claude-sonnet-4-20250514` - Model Claude 4 Sonnet terbaru
+- **Optimasi GPU Lanjutan**: Peningkatan akselerasi GPU yang komprehensif:
+  - Deteksi hardware real-time dan rekomendasi pengaturan optimal
+  - Manajemen memori otomatis dan pembersihan
+  - Monitoring performa dengan analitik detail dan saran
+  - Optimasi batch size cerdas berdasarkan memori GPU tersedia
+- **Sistem Notifikasi Windows**: Integrasi notifikasi Windows asli:
+  - Notifikasi penyelesaian processing dengan alert suara
+  - Statistik penyelesaian queue dan informasi waktu
+  - Notifikasi error dengan info troubleshooting detail
+  - Preferensi notifikasi yang dapat dikonfigurasi dan tingkat urgensi
 
-### diubah
-- ** Arsitektur Keamanan **: Fungsi Keamanan Konsolidasi menjadi Modul Crypto untuk Organisasi yang Lebih Baik
-- ** Struktur kode **: Modularitas yang ditingkatkan dengan pemisahan kekhawatiran yang lebih bersih
-- ** Dokumentasi **: Dokumentasi Modul Crypto yang Ditingkatkan dengan Deskripsi Fungsi Lengkap
+### Diubah
+- **Arsitektur Keamanan**: Fungsi keamanan dikonsolidasi menjadi modul crypto untuk organisasi yang lebih baik
+- **Struktur Kode**: Modularitas yang ditingkatkan dengan pemisahan kepentingan yang lebih bersih
+- **Dokumentasi**: Dokumentasi modul crypto yang ditingkatkan dengan deskripsi fungsi lengkap
+- **Manajemen Konfigurasi**: Perbaikan proses save/load config untuk menggunakan fungsi enkripsi yang aman secara konsisten
 
-### Tetap
-- ** Kerentanan Keamanan **: Menyelesaikan semua masalah kunci API yang terpapar secara otomatis
-- ** Organisasi kode **: Menghilangkan file keamanan mandiri untuk struktur proyek yang lebih bersih
-- ** Dependensi Impor **: Menambahkan ketergantungan `antropik` yang hilang ke persyaratan.txt
+### Diperbaiki
+- **Kerentanan Keamanan**: Menyelesaikan semua masalah API key yang terekspos secara otomatis
+- **Organisasi Kode**: Menghilangkan file keamanan mandiri untuk struktur proyek yang lebih bersih
+- **Dependensi Import**: Menambahkan dependensi `anthropic` yang hilang ke requirements.txt
+- **Bug Enkripsi API Key**: Memperbaiki masalah kritis dimana API key terenkripsi dikirim ke API tanpa dekripsi
+- **Proses Penyimpanan Konfigurasi**: Memastikan qt_app.py menggunakan fungsi save_config yang aman untuk penanganan enkripsi yang tepat
 
 ### Keamanan
-- ** Enkripsi Kunci API **: Semua tombol API sekarang secara otomatis dienkripsi menggunakan tombol spesifik mesin
-- ** Pencegahan Kerentanan **: Pemindaian Keamanan Proaktif dan Perbaikan Otomatis
--** Keamanan Konfigurasi Nol **: Fitur Keamanan Bekerja di luar kotak tanpa intervensi pengguna
+- **Enkripsi API Key**: Semua API key sekarang otomatis dienkripsi menggunakan kunci spesifik mesin
+- **Pencegahan Kerentanan**: Pemindaian keamanan proaktif dan perbaikan otomatis
+- **Keamanan Konfigurasi Nol**: Fitur keamanan bekerja out-of-the-box tanpa intervensi pengguna
+- **Konsistensi Enkripsi**: Memperbaiki masalah enkripsi dan dekripsi ganda untuk penanganan API key yang andal
 
 ## [3.0.0-RC1] - 2025-05-20
 
