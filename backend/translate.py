@@ -91,7 +91,7 @@ def validate_anthropic_key(api_key, status_callback):
 
 # --- End API Key Validation Functions ---
 
-def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, target_language, status_callback, batch_size, gemini_temperature, gemini_top_p, gemini_top_k):
+def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, target_language, status_callback, batch_size, gemini_temperature, gemini_top_p, gemini_top_k, cancel_callback=None):
     """Translates text segments using Gemini API."""
     if not gemini_api_key:
         status_callback("Error: Gemini API Key is missing.", level="ERROR")
@@ -116,6 +116,11 @@ def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, tar
     mismatch_tolerance = 10
 
     for i in range(0, total_segments, batch_size):
+        # Check for cancellation before processing each batch
+        if cancel_callback and cancel_callback():
+            status_callback("Translation cancelled by user.", "WARNING")
+            return None
+            
         batch_num = (i // batch_size) + 1
         status_callback(f"Processing batch {batch_num}/{num_batches} with Gemini... ", level="INFO")
         batch = text_segments[i:i+batch_size]
@@ -175,6 +180,11 @@ def _translate_with_gemini(gemini_api_key, gemini_model_name, text_segments, tar
         except Exception as e_batch:
             status_callback(f"Error/Fallback for Gemini batch {batch_num}: {e_batch}. Attempting individual translation...", level="WARNING")
             for k, segment_item in enumerate(batch):
+                # Check for cancellation during fallback translation
+                if cancel_callback and cancel_callback():
+                    status_callback("Translation cancelled during fallback.", "WARNING")
+                    return None
+                    
                 try:
                     fallback_prompt = (
                         f"Translate the following dialogue segment into {target_language}. "
@@ -417,7 +427,7 @@ def _translate_with_anthropic(anthropic_api_key, anthropic_model_name, text_segm
     status_callback("Anthropic translation finished.", level="INFO")
     return translated_segments 
 
-def translate_text(provider_config, text_segments, target_language, status_callback=None, batch_size_setting=None):
+def translate_text(provider_config, text_segments, target_language, status_callback=None, batch_size_setting=None, cancel_callback=None):
     """
     Translates the given text segments using the specified provider.
     
@@ -427,6 +437,7 @@ def translate_text(provider_config, text_segments, target_language, status_callb
         target_language: Language to translate to
         status_callback: Function to call for status updates
         batch_size_setting: Number of segments to process at once
+        cancel_callback: Function to check if cancellation was requested
     
     Returns:
         List of translated segments with original timestamps, or None on failure
@@ -456,9 +467,14 @@ def translate_text(provider_config, text_segments, target_language, status_callb
                 return None
             
             status_callback(f"Starting translation with Gemini model '{gemini_model}' to {target_language}...", "INFO")
+            # Check for cancellation before starting translation
+            if cancel_callback and cancel_callback():
+                status_callback("Translation cancelled by user.", "WARNING")
+                return None
+                
             return _translate_with_gemini(
                 gemini_api_key, gemini_model, text_segments, target_language, 
-                status_callback, batch_size, gemini_temperature, gemini_top_p, gemini_top_k
+                status_callback, batch_size, gemini_temperature, gemini_top_p, gemini_top_k, cancel_callback
             )
         
         elif provider_name == "OpenAI":

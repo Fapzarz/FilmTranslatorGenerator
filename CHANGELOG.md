@@ -45,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Configuration Load Process**: Fixed qt_app.py to use secure load_config function preventing API key validation failures after restart
 - **Cancel Processing Feature**: Added cancel button and functionality to stop video processing mid-operation
 - **Hardware Auto-Detection**: Implemented automatic hardware detection and optimization on first startup
+- **Cancel Translation Bug**: Fixed issue where translation continued processing after cancel request was made
 
 ### Security
 - **API Key Encryption**: All API keys now automatically encrypted using machine-specific keys
@@ -304,6 +305,7 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Proses Pemuatan Konfigurasi**: Memperbaiki qt_app.py untuk menggunakan fungsi load_config yang aman mencegah kegagalan validasi API key setelah restart
 - **Fitur Cancel Processing**: Menambahkan tombol cancel dan fungsionalitas untuk menghentikan pemrosesan video di tengah operasi
 - **Auto-Deteksi Hardware**: Mengimplementasikan deteksi hardware otomatis dan optimasi pada startup pertama
+- **Bug Cancel Translation**: Memperbaiki masalah dimana translation terus berjalan setelah permintaan cancel dibuat
 
 ### Keamanan
 - **Enkripsi API Key**: Semua API key sekarang otomatis dienkripsi menggunakan kunci spesifik mesin

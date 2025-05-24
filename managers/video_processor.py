@@ -325,9 +325,13 @@ class VideoProcessor:
                     # DeepSeek model is fixed, no var needed here for the call itself
                 }
                 
+                # Define cancel check function
+                def cancel_check():
+                    return hasattr(self.app, 'cancel_requested') and self.app.cancel_requested
+                
                 translated_segments = translate_text(
                     provider_config_for_translation, transcribed_segments, self.app.target_language,
-                    self.app.log_status, batch_size
+                    self.app.log_status, batch_size, cancel_check
                 )
                 
                 if translated_segments is None:
