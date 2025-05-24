@@ -173,6 +173,11 @@ class VideoProcessor:
         self.signals.update_ui.emit(lambda: self._update_button_state("Processing...", False))
 
         for video_idx, video_file in enumerate(self.app.video_queue):
+            # Check for cancellation request
+            if hasattr(self.app, 'cancel_requested') and self.app.cancel_requested:
+                self.app.log_status("Processing cancelled by user.", "WARNING")
+                break
+                
             if self.app.processed_file_data[video_file]['status'] == 'Done':
                 self.app.log_status(f"Skipping {os.path.basename(video_file)}, already processed.")
                 continue
@@ -246,6 +251,12 @@ class VideoProcessor:
                 except (ValueError, TypeError):
                     batch_size = get_default_config()['batch_size']  # Fallback to default
                 
+                # Check for cancellation before transcription
+                if hasattr(self.app, 'cancel_requested') and self.app.cancel_requested:
+                    self.app.log_status("Processing cancelled by user.", "WARNING")
+                    self.app.processed_file_data[video_file]['status'] = 'Cancelled'
+                    break
+                
                 # Transcription
                 self.signals.update_progress.emit(
                     f"Loading Whisper model for {os.path.basename(video_file)}...", 
@@ -284,6 +295,12 @@ class VideoProcessor:
                 if video_idx == self.app.video_listbox.currentRow():
                     self.app.transcribed_segments = transcribed_segments  # Update AppGUI instance for current selection
                     self.signals.update_ui.emit(lambda: self._update_comparison_view())
+                
+                # Check for cancellation before translation
+                if hasattr(self.app, 'cancel_requested') and self.app.cancel_requested:
+                    self.app.log_status("Processing cancelled by user.", "WARNING")
+                    self.app.processed_file_data[video_file]['status'] = 'Cancelled'
+                    break
                 
                 # Translation
                 self.app.processed_file_data[video_file]['status'] = 'Translating'
@@ -444,9 +461,19 @@ class VideoProcessor:
     
     def _process_finished(self):
         """Called when process is finished (called in main thread)."""
+        # Reset UI buttons
+        self.app.cancel_button.setVisible(False)
+        self.app.process_button.setVisible(True)
         self.app.process_button.setText("Process Selected Video")
         self.app.process_button.setEnabled(True)
         self.app.current_processing_video = None
+        
+        # Check if processing was cancelled
+        if hasattr(self.app, 'cancel_requested') and self.app.cancel_requested:
+            self.app.progress_status.setText("Processing cancelled")
+            self.app.log_status("Processing was cancelled by user.")
+            self.app.cancel_requested = False  # Reset flag
+            return
         
         # Calculate final statistics
         total_time = time.time() - self.queue_start_time if self.queue_start_time else 0

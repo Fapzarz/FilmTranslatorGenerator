@@ -68,6 +68,7 @@ class QtAppGUI(QMainWindow):
         self.processed_file_data = {}
         self.current_processing_video = None
         self.current_project_path = None
+        self.cancel_requested = False  # Flag for canceling processing
         
         self.transcribed_segments = None
         self.translated_segments = None
@@ -241,11 +242,21 @@ class QtAppGUI(QMainWindow):
         
         left_layout.addWidget(subtitle_styler_frame)
         
-        # Process button
+        # Process/Cancel button container
+        process_button_layout = QHBoxLayout()
+        
         self.process_button = QPushButton("Process Selected Video")
         self.process_button.clicked.connect(self.process_selected_video)
         self.process_button.setStyleSheet("font-weight: bold; padding: 10px;")
-        left_layout.addWidget(self.process_button)
+        process_button_layout.addWidget(self.process_button)
+        
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.cancel_processing)
+        self.cancel_button.setStyleSheet("background-color: #d32f2f; color: white; font-weight: bold; padding: 10px;")
+        self.cancel_button.setVisible(False)  # Hidden by default
+        process_button_layout.addWidget(self.cancel_button)
+        
+        left_layout.addLayout(process_button_layout)
         
         # Progress section
         progress_frame = QFrame()
@@ -515,8 +526,30 @@ class QtAppGUI(QMainWindow):
             # Import the secure load_config function
             from config import load_config
             
+            # Check if this is first run (no config file exists)
+            config_file = "config.json"
+            is_first_run = not os.path.exists(config_file)
+            
             # Use the secure load_config function that handles decryption
             config = load_config()
+            
+            # If first run, detect and configure hardware
+            if is_first_run:
+                self.log_status("First startup detected - configuring optimal settings...")
+                self.detect_and_configure_hardware()
+                
+                # Update UI with auto-detected settings
+                self.language_combo.setCurrentText(self.target_language)
+                self.whisper_model_combo.setCurrentText(self.whisper_model_name)
+                self.output_format_combo.setCurrentText(self.output_format)
+                
+                # Apply the default theme
+                self.apply_theme(self.theme)
+                
+                # Save the auto-detected configuration
+                self._save_config()
+                self.log_status("Hardware optimization complete!")
+                return  # Skip loading default values since we just set optimal ones
             
             # Apply loaded configuration
             self.target_language = config.get('target_language', self.target_language)
@@ -704,7 +737,23 @@ class QtAppGUI(QMainWindow):
     
     def process_selected_video(self):
         """Process the selected video."""
+        self.cancel_requested = False  # Reset cancel flag
+        self.process_button.setVisible(False)  # Hide process button
+        self.cancel_button.setVisible(True)   # Show cancel button
         self.video_processor.start_processing()
+    
+    def cancel_processing(self):
+        """Cancel the current video processing."""
+        self.cancel_requested = True
+        self.log_status("Processing cancellation requested...", "WARNING")
+        
+        # Update UI immediately
+        self.cancel_button.setVisible(False)
+        self.process_button.setVisible(True)
+        self.progress_status.setText("Cancelling...")
+        
+        # Reset progress
+        self.progress_bar.setValue(0)
     
     def copy_to_clipboard(self):
         """Copy the current output to the clipboard."""
@@ -1322,6 +1371,73 @@ class QtAppGUI(QMainWindow):
         
         # Save configuration with updated data
         self._save_config()
+
+    def detect_and_configure_hardware(self):
+        """Detect user's hardware and auto-configure optimal settings."""
+        self.log_status("Detecting hardware configuration...")
+        
+        try:
+            import torch
+            import platform
+            
+            # Detect CUDA availability
+            cuda_available = torch.cuda.is_available()
+            device_count = torch.cuda.device_count() if cuda_available else 0
+            
+            self.log_status(f"System: {platform.system()} {platform.release()}")
+            
+            if cuda_available and device_count > 0:
+                # Get GPU info
+                gpu_name = torch.cuda.get_device_name(0)
+                gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)  # GB
+                
+                self.log_status(f"CUDA available: {device_count} GPU(s) detected")
+                self.log_status(f"Primary GPU: {gpu_name} ({gpu_memory:.1f} GB)")
+                
+                # Auto-configure for CUDA
+                self.device = "cuda"
+                
+                # Choose compute type based on GPU memory
+                if gpu_memory >= 6.0:
+                    self.compute_type = "float16"  # Good for most GPUs with 6GB+
+                    self.batch_size = 750 if gpu_memory >= 8.0 else 500
+                    self.log_status("Auto-configured: CUDA with float16 precision")
+                else:
+                    self.compute_type = "int8"     # More memory efficient for smaller GPUs
+                    self.batch_size = 400
+                    self.log_status("Auto-configured: CUDA with int8 precision (memory optimization)")
+                
+            else:
+                self.log_status("CUDA not available, configuring for CPU")
+                self.device = "cpu"
+                self.compute_type = "float32"
+                self.batch_size = 200  # Conservative for CPU
+                self.log_status("Auto-configured: CPU with float32 precision")
+            
+            # Detect CPU cores for potential optimizations
+            import os
+            cpu_count = os.cpu_count()
+            self.log_status(f"CPU cores: {cpu_count}")
+            
+            # Auto-select Whisper model based on hardware
+            if cuda_available and gpu_memory >= 8.0:
+                self.whisper_model_name = "large-v3"  # Use best model for high-end GPUs
+                self.log_status("Auto-selected Whisper model: large-v3 (high-performance GPU detected)")
+            elif cuda_available and gpu_memory >= 4.0:
+                self.whisper_model_name = "medium"    # Good balance for mid-range GPUs
+                self.log_status("Auto-selected Whisper model: medium (mid-range GPU detected)")
+            else:
+                self.whisper_model_name = "small"     # Conservative for CPU/low-end GPU
+                self.log_status("Auto-selected Whisper model: small (CPU or low-end GPU detected)")
+            
+        except Exception as e:
+            self.log_status(f"Hardware detection failed: {e}", "WARNING")
+            # Fallback to safe defaults
+            self.device = "cpu"
+            self.compute_type = "float32"
+            self.batch_size = 200
+            self.whisper_model_name = "small"
+            self.log_status("Using fallback configuration: CPU, float32, small model")
 
 def main():
     app = QApplication(sys.argv)
