@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Integrated Security System**: All security functions moved from standalone script to `utils/crypto.py`
 - **Comprehensive Cryptographic Module**: Complete module documentation with security features
 - **Automated Security Checks**: Built-in API key protection and vulnerability detection
+- **Latest Anthropic Models**: Added support for Claude-4 series models:
+  - `claude-opus-4-20250514` - Latest Claude 4 Opus model
+  - `claude-sonnet-4-20250514` - Latest Claude 4 Sonnet model
 
 ### Changed  
 - **Security Architecture**: Consolidated security functions into crypto module for better organization
@@ -255,6 +258,9 @@ Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - ** Sistem Keamanan Terpadu **: Semua fungsi keamanan dipindahkan dari skrip mandiri ke `utils/crypto.py`
 - ** Modul Kriptografi Komprehensif **: Dokumentasi Modul Lengkap dengan Fitur Keamanan
 - ** Pemeriksaan Keamanan Otomatis **: Perlindungan kunci API bawaan dan deteksi kerentanan
+- **Model Anthropic Terbaru**: Menambahkan dukungan untuk model Claude-4 series:
+  - `claude-opus-4-20250514` - Model Claude 4 Opus terbaru
+  - `claude-sonnet-4-20250514` - Model Claude 4 Sonnet terbaru
 
 ### diubah
 - ** Arsitektur Keamanan **: Fungsi Keamanan Konsolidasi menjadi Modul Crypto untuk Organisasi yang Lebih Baik

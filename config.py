@@ -32,13 +32,15 @@ OPENAI_MODELS = [
 
 # Anthropic Models list
 ANTHROPIC_MODELS = [
-    # flagship terbaru hybrid-reasoning
-    "claude-3-opus-20240229", # Moved Opus to top as a common high-end choice
-    "claude-3-5-sonnet-20240620", # Claude 3.5 Sonnet (replacing the one with 20241022 as it's more standard)
-    # The user provided list seems to have future dates, using common existing ones for now.
-    "claude-3-7-sonnet-20250219", # User provided, seems like a future model
-    "claude-3-5-sonnet-20241022", # User provided, less common naming
-    "claude-3-5-haiku-20241022",  # User provided, less common naming
+    # flagship terbaru claude-4 series
+    "claude-opus-4-20250514",     # Latest Claude 4 Opus model
+    "claude-sonnet-4-20250514",   # Latest Claude 4 Sonnet model
+    # claude-3 series
+    "claude-3-opus-20240229",     # Claude 3 Opus
+    "claude-3-5-sonnet-20240620", # Claude 3.5 Sonnet (stable version)
+    "claude-3-7-sonnet-20250219", # Claude 3.7 Sonnet
+    "claude-3-5-sonnet-20241022", # Claude 3.5 Sonnet (alternative)
+    "claude-3-5-haiku-20241022",  # Claude 3.5 Haiku
 ]
 
 # DeepSeek Model (fixed for now)
