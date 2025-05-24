@@ -1,10 +1,12 @@
 """
 Manages video processing functionality for the Film Translator Generator Qt Edition.
+Enhanced with GPU optimization and Windows notifications.
 """
 import os
 import threading
 import gc
 import torch
+import time
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import QTimer, QObject, Signal, QCoreApplication, Qt
 
@@ -12,6 +14,21 @@ from config import get_default_config
 from backend.transcribe import transcribe_video, load_whisper_model
 from backend.translate import translate_text
 from utils.format import format_output
+
+# Import new optimization and notification modules
+try:
+    from utils.gpu_optimization import GPUOptimizer, PerformanceMonitor
+    GPU_OPTIMIZATION_AVAILABLE = True
+except ImportError:
+    GPU_OPTIMIZATION_AVAILABLE = False
+    print("GPU optimization not available. Install nvidia-ml-py3 and psutil for enhanced performance monitoring.")
+
+try:
+    from utils.notifications import notification_manager
+    NOTIFICATIONS_AVAILABLE = True
+except ImportError:
+    NOTIFICATIONS_AVAILABLE = False
+    print("Windows notifications not available. Install win10toast and plyer for notification support.")
 
 # Helper class to safely update UI from a worker thread
 class ProcessSignals(QObject):
@@ -31,6 +48,19 @@ class VideoProcessor:
         self.processing_thread = None
         self.signals = ProcessSignals()
         
+        # Initialize GPU optimization and performance monitoring
+        if GPU_OPTIMIZATION_AVAILABLE:
+            self.gpu_optimizer = GPUOptimizer()
+            self.performance_monitor = PerformanceMonitor()
+        else:
+            self.gpu_optimizer = None
+            self.performance_monitor = None
+        
+        # Processing statistics
+        self.queue_start_time = None
+        self.processed_count = 0
+        self.failed_count = 0
+        
         # Connect signals
         self.signals.update_progress.connect(self._update_progress_ui)
         self.signals.update_ui.connect(self._update_ui)
@@ -40,12 +70,52 @@ class VideoProcessor:
         """Execute a UI update callback in the main thread."""
         callback()
     
+    def optimize_gpu_settings(self):
+        """
+        Optimize GPU settings based on current hardware capabilities.
+        Updates app settings with optimal device and compute type.
+        """
+        if not self.gpu_optimizer:
+            return
+        
+        try:
+            optimal_settings = self.gpu_optimizer.get_optimal_device_settings()
+            suggested_batch_size = self.gpu_optimizer.suggest_batch_size(self.app.whisper_model_name)
+            
+            # Log optimization suggestions
+            memory_stats = self.gpu_optimizer.get_memory_usage()
+            if memory_stats:
+                for gpu_id, stats in memory_stats.items():
+                    self.app.log_status(f"GPU {gpu_id}: {stats['used_gb']:.1f}GB used / {stats['total_gb']:.1f}GB total ({stats['usage_percent']:.1f}%)")
+            
+            self.app.log_status(f"Optimal settings: Device={optimal_settings['device']}, Compute Type={optimal_settings['compute_type']}")
+            self.app.log_status(f"Suggested batch size: {suggested_batch_size}")
+            
+            # Auto-apply optimal settings if user hasn't manually changed them
+            if hasattr(self.app, 'auto_optimize_gpu') and self.app.auto_optimize_gpu:
+                if optimal_settings['device'] != self.app.device:
+                    self.app.device = optimal_settings['device']
+                    self.app.log_status(f"Auto-optimized device to: {optimal_settings['device']}")
+                
+                if optimal_settings['compute_type'] != self.app.compute_type:
+                    self.app.compute_type = optimal_settings['compute_type']
+                    self.app.log_status(f"Auto-optimized compute type to: {optimal_settings['compute_type']}")
+                
+        except Exception as e:
+            self.app.log_status(f"Error during GPU optimization: {e}")
+
     def load_whisper_model_sync(self):
         """
         Loads the faster-whisper model based on selected settings.
         This function is called by process_video_thread.
         Returns True if model loaded successfully, False otherwise.
         """
+        # Optimize GPU settings before loading model
+        if self.gpu_optimizer:
+            self.optimize_gpu_settings()
+            # Optimize memory before loading new model
+            self.gpu_optimizer.optimize_memory(aggressive=True)
+        
         model_name = self.app.whisper_model_name
         device = self.app.device
         compute_type = self.app.compute_type
@@ -90,9 +160,18 @@ class VideoProcessor:
         # Store original button state to restore later
         original_button_text = self.app.process_button.text()
         
+        # Initialize processing statistics
+        self.queue_start_time = time.time()
+        self.processed_count = 0
+        self.failed_count = 0
+        
+        # Start performance monitoring
+        if self.performance_monitor:
+            self.performance_monitor.start_monitoring()
+        
         # Update UI in the main thread
         self.signals.update_ui.emit(lambda: self._update_button_state("Processing...", False))
-        
+
         for video_idx, video_file in enumerate(self.app.video_queue):
             if self.app.processed_file_data[video_file]['status'] == 'Done':
                 self.app.log_status(f"Skipping {os.path.basename(video_file)}, already processed.")
@@ -368,9 +447,56 @@ class VideoProcessor:
         self.app.process_button.setText("Process Selected Video")
         self.app.process_button.setEnabled(True)
         self.app.current_processing_video = None
+        
+        # Calculate final statistics
+        total_time = time.time() - self.queue_start_time if self.queue_start_time else 0
+        total_videos = len(self.app.video_queue)
+        
+        # Count successful and failed processing
+        success_count = 0
+        failed_count = 0
+        for video_file in self.app.video_queue:
+            status = self.app.processed_file_data.get(video_file, {}).get('status', 'Unknown')
+            if status == 'Done':
+                success_count += 1
+            elif status.startswith('Error_'):
+                failed_count += 1
+        
+        # Send notification
+        if NOTIFICATIONS_AVAILABLE:
+            try:
+                notification_manager.notify_queue_complete(
+                    processed=total_videos,
+                    total=total_videos,
+                    failed=failed_count,
+                    total_time=total_time
+                )
+            except Exception as e:
+                self.app.log_status(f"Notification error: {e}")
+        
+        # Performance report
+        if self.performance_monitor:
+            try:
+                report = self.performance_monitor.get_performance_report()
+                if report.get('optimization_suggestions'):
+                    self.app.log_status("Performance Suggestions:")
+                    for suggestion in report['optimization_suggestions']:
+                        self.app.log_status(f"  • {suggestion}")
+            except Exception as e:
+                self.app.log_status(f"Performance monitoring error: {e}")
+        
+        # GPU cleanup
+        if self.gpu_optimizer:
+            try:
+                self.gpu_optimizer.cleanup()
+            except Exception as e:
+                self.app.log_status(f"GPU cleanup error: {e}")
+        
         if hasattr(self.app, 'queue_manager'):
             self.app.queue_manager.update_queue_statistics()
-        self.app.log_status("Processing queue completed.")
+        
+        # Log completion with statistics
+        self.app.log_status(f"Processing queue completed: {success_count}/{total_videos} successful, {failed_count} failed in {total_time:.1f}s")
         self.processing_thread = None
     
     def start_processing(self):

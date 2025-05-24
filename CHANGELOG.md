@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [3.0.0] - 2025-05-23
+## [3.0.0] - 2025-05-24
 
 ### Added
 - **Integrated Security System**: All security functions moved from standalone script to `utils/crypto.py`
@@ -19,6 +19,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Latest Anthropic Models**: Added support for Claude-4 series models:
   - `claude-opus-4-20250514` - Latest Claude 4 Opus model
   - `claude-sonnet-4-20250514` - Latest Claude 4 Sonnet model
+- **Advanced GPU Optimization**: Comprehensive GPU acceleration enhancements:
+  - Real-time hardware detection and optimal settings recommendation
+  - Automatic memory management and cleanup
+  - Performance monitoring with detailed analytics and suggestions
+  - Smart batch size optimization based on available GPU memory
+- **Windows Notifications System**: Native Windows notification integration:
+  - Processing completion notifications with sound alerts
+  - Queue completion statistics and timing information
+  - Error notifications with detailed troubleshooting info
+  - Configurable notification preferences and urgency levels
 
 ### Changed  
 - **Security Architecture**: Consolidated security functions into crypto module for better organization
@@ -252,15 +262,23 @@ Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [3.0.0] - 2025-01-31
+## [3.0.0] - 2025-05-24
 
 ### Ditambahkan
 - ** Sistem Keamanan Terpadu **: Semua fungsi keamanan dipindahkan dari skrip mandiri ke `utils/crypto.py`
 - ** Modul Kriptografi Komprehensif **: Dokumentasi Modul Lengkap dengan Fitur Keamanan
 - ** Pemeriksaan Keamanan Otomatis **: Perlindungan kunci API bawaan dan deteksi kerentanan
-- **Model Anthropic Terbaru**: Menambahkan dukungan untuk model Claude-4 series:
-  - `claude-opus-4-20250514` - Model Claude 4 Opus terbaru
-  - `claude-sonnet-4-20250514` - Model Claude 4 Sonnet terbaru
+- **Model Anthropic Terbaru**: Menambahkan dukungan untuk model Claude-4 series:  - `claude-opus-4-20250514` - Model Claude 4 Opus terbaru  - `claude-sonnet-4-20250514` - Model Claude 4 Sonnet terbaru- **Optimasi GPU Lanjutan**: Peningkatan akselerasi GPU yang komprehensif:  - Deteksi hardware real-time dan rekomendasi pengaturan optimal  - Manajemen memori otomatis dan pembersihan  - Monitoring performa dengan analitik detail dan saran  - Optimasi batch size cerdas berdasarkan memori GPU tersedia- **Sistem Notifikasi Windows**: Integrasi notifikasi Windows asli:  - Notifikasi penyelesaian processing dengan alert suara  - Statistik penyelesaian queue dan informasi waktu  - Notifikasi error dengan info troubleshooting detail  - Preferensi notifikasi yang dapat dikonfigurasi dan tingkat urgensi
+- **Advanced GPU Optimization**: Comprehensive GPU acceleration enhancements:
+  - Real-time hardware detection and optimal settings recommendation
+  - Automatic memory management and cleanup
+  - Performance monitoring with detailed analytics and suggestions
+  - Smart batch size optimization based on available GPU memory
+- **Windows Notifications System**: Native Windows notification integration:
+  - Processing completion notifications with sound alerts
+  - Queue completion statistics and timing information
+  - Error notifications with detailed troubleshooting info
+  - Configurable notification preferences and urgency levels
 
 ### diubah
 - ** Arsitektur Keamanan **: Fungsi Keamanan Konsolidasi menjadi Modul Crypto untuk Organisasi yang Lebih Baik
