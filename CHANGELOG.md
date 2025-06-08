@@ -10,6 +10,37 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [3.1.0] - 2025-06-08
+
+### Added
+- **Local Model Translation Support**: Added support for local translation models (#2)
+  - Integration with HuggingFace models for offline translation
+  - Privacy-focused translation without external API calls
+  - Support for local model configuration and selection
+- **DeepSeek API Key Validation**: Implemented validation function for DeepSeek API keys (#3)
+  - Built-in validation to verify DeepSeek API key authenticity
+  - Improved error handling for invalid API keys
+  - Enhanced user experience with immediate feedback
+
+### Changed
+- **Documentation Modernization**: Modernized README.md with improved structure and readability
+- **Version Consistency**: Updated all documentation files to reflect version 3.1.0
+
+### Fixed
+- **Advanced Editor Logic**: Fixed logic errors in advanced subtitle editor (#4)
+  - Resolved issues with subtitle timing calculations
+  - Improved editor stability and responsiveness
+  - Fixed UI inconsistencies in advanced editor dialog
+- **Import Formatting**: Cleaned up and standardized import statements across modules
+  - Consistent import ordering and formatting
+  - Removed unused imports for better code clarity
+
+### Improved
+- Enhanced README.md with modern markdown formatting
+- Better organization of features and requirements sections
+- Improved documentation consistency across all HTML files
+- More robust API key validation across all providers
+
 ## [3.0.0] - 2025-05-24
 
 ### Added
@@ -269,6 +300,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Semua perubahan penting pada proyek ini akan didokumentasikan dalam file ini.
 
 Format didasarkan pada [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [3.1.0] - 2025-06-08
+
+### Ditambahkan
+- **Dukungan Model Lokal untuk Terjemahan**: Menambahkan dukungan untuk model terjemahan lokal (#2)
+  - Integrasi dengan model HuggingFace untuk terjemahan offline
+  - Terjemahan yang berfokus pada privasi tanpa panggilan API eksternal
+  - Dukungan untuk konfigurasi dan pemilihan model lokal
+- **Validasi API Key DeepSeek**: Mengimplementasikan fungsi validasi untuk API key DeepSeek (#3)
+  - Validasi bawaan untuk memverifikasi keaslian API key DeepSeek
+  - Peningkatan penanganan error untuk API key yang tidak valid
+  - Pengalaman pengguna yang lebih baik dengan umpan balik langsung
+
+### Diubah
+- **Modernisasi Dokumentasi**: Modernisasi README.md dengan struktur dan keterbacaan yang lebih baik
+- **Konsistensi Versi**: Memperbarui semua file dokumentasi untuk mencerminkan versi 3.1.0
+
+### Diperbaiki
+- **Logika Advanced Editor**: Memperbaiki kesalahan logika di advanced subtitle editor (#4)
+  - Menyelesaikan masalah dengan kalkulasi timing subtitle
+  - Meningkatkan stabilitas dan responsivitas editor
+  - Memperbaiki inkonsistensi UI di dialog advanced editor
+- **Format Import**: Membersihkan dan menstandarkan statement import di seluruh modul
+  - Pengurutan dan format import yang konsisten
+  - Menghapus import yang tidak digunakan untuk kejelasan kode yang lebih baik
+
+### Diperbaiki
+- Peningkatan README.md dengan format markdown modern
+- Organisasi yang lebih baik dari bagian fitur dan persyaratan
+- Peningkatan konsistensi dokumentasi di semua file HTML
+- Validasi API key yang lebih robust di semua provider
 
 ## [3.0.0] - 2025-05-24
 

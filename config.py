@@ -66,8 +66,8 @@ AUTO_SAVE_OPTIONS = ["On", "Off"]
 
 # --- App Info ---
 APP_NAME = "Film Translator Generator"
-APP_TITLE = f"{APP_NAME} 3.0.0"
-APP_VERSION = "3.0.0"
+APP_TITLE = f"{APP_NAME} 3.1.0"
+APP_VERSION = "3.1.0"
 GITHUB_URL = "https://github.com/zarzet/FilmTranslatorGenerator"
 
 # --- Default Keyboard Shortcuts ---

@@ -1,242 +1,345 @@
-# Film Translator Generator
+# 🎬 Film Translator Generator
 
-[English](#english) | [Bahasa Indonesia](#bahasa-indonesia)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](https://github.com/Fapzarz/FilmTranslatorGenerator)
+[![License](https://img.shields.io/badge/license-AGPLv3-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://python.org)
+[![Qt](https://img.shields.io/badge/Qt-PySide6-green.svg)](https://pyside.org)
 
-<a name="english"></a>
-<details open>
-<summary><strong>English</strong></summary>
+> 🚀 **Modern desktop application for automatic video transcription and translation**
 
-## Description
+A powerful, user-friendly desktop application that transcribes audio from video files using Faster-Whisper and translates text using multiple AI providers to generate professional subtitle files.
 
-A simple desktop application for transcribing audio from video files using Faster-Whisper and translating the text using Google Gemini API to generate subtitle files in various formats.
+---
 
-### Features
+## 📋 Table of Contents
 
-*   Modern user interface with Sun Valley theme (sv-ttk) and panel-based layout
-*   **Video Queue Management**: Add, remove, and process multiple video files sequentially.
-*   **Project Save/Load**: Save your current queue, processed data, and settings into a `.ftgproj` file and load it back later.
-*   **Basic Subtitle Editor**: Edit the text and timestamps of generated subtitles directly within the application.
-*   **Preview Video with Subtitles**: Attempt to open the selected video with its generated subtitles in your default media player.
-*   **Multiple Translation API Support**: Choose between Google Gemini, OpenAI, Anthropic Claude, DeepSeek, or a local HuggingFace model for translations.
-*   **API Key Validation**: Built-in checks verify Gemini, OpenAI, Anthropic, and DeepSeek keys before
-*   **Model Selection for Providers**: 
-    *   Select specific models for Gemini (`gemini-2.5-flash-preview-04-17` or `gemini-2.5-pro-exp-03-25`)
-    *   Choose from OpenAI models (GPT-4.1, GPT-4o, etc.) 
-    *   Select Anthropic models (Claude 3 Opus, Claude 3.7 Sonnet, etc.)
-*   Video preview with thumbnails and information
-*   **Multiple Output Format Support:** Choose between `SRT`, `VTT`, or `TXT` formats
-*   **Side-by-Side Comparison:** View original text and translation side-by-side
-*   **Whisper Model Selection:** Choose between `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3`
-*   **Device & Computation Selection:** Choose `cuda` or `cpu` and the appropriate computation type (`float16`, `int8`, etc.)
-*   **Advanced Gemini API Settings**: Customize Temperature, Top-P, and Top-K for translations.
-*   **Advanced Settings:** Configure batch size, theme, accent color, and automatic features
-*   **Modular Structure:** Code organized in separate modules for easier development
-*   Video transcription using Faster-Whisper
-*   Text translation using multiple AI providers:
-    * Google Gemini API:
-      * `gemini-2.5-flash-preview-04-17` (faster processing)
-      * `gemini-2.5-pro-exp-03-25` (higher quality for complex translations)
-    * OpenAI API (GPT-4.1, GPT-4o, GPT-3.5-turbo, etc.)
-    * Anthropic API (Claude 3 Opus, Claude 3.5 Sonnet, etc.)
-    * DeepSeek API (via DeepSeek-chat)
-    * Local model via HuggingFace (MarianMT/Argos Translate)
-*   Comprehensive settings storage in `config.json`
+- [✨ Features](#-features)
+- [🛠️ Requirements](#️-requirements)
+- [📦 Installation](#-installation)
+- [🚀 Quick Start](#-quick-start)
+- [🎯 Usage Guide](#-usage-guide)
+- [🏗️ Project Structure](#️-project-structure)
+- [🔧 Configuration](#-configuration)
+- [📚 Documentation](#-documentation)
+- [📝 License](#-license)
+- [🔄 Changelog](#-changelog)
 
-### Requirements
+---
 
-*   Python 3.8+
-*   `ffmpeg` (Must be installed and in your system PATH. Download from [https://ffmpeg.org/](https://ffmpeg.org/))
-*   CUDA Toolkit & cuDNN (Recommended for GPU acceleration with Faster-Whisper. Ensure compatible versions are installed)
-*   API Keys (Choose at least one based on your preferred translation provider, or use a local model):
-*   Google Gemini API Key (Get from [Google AI Studio](https://aistudio.google.com/app/apikey))
-    *   OpenAI API Key (Get from [OpenAI Platform](https://platform.openai.com/api-keys))
-    *   Anthropic API Key (Get from [Anthropic Console](https://console.anthropic.com/))
-    *   DeepSeek API Key (Get from [DeepSeek Platform](https://platform.deepseek.com/))
-    *   Local model files downloaded from HuggingFace (no API key required)
+## ✨ Features
 
-### Installation
+### 🎨 **Modern User Interface**
+- **Qt-based GUI** with Sun Valley theme for professional appearance
+- **Panel-based layout** with intuitive organization
+- **Dark/Light theme** support with customizable accent colors
+- **Real-time preview** with thumbnails and video information
 
-1.  **Clone repository:**
-    ```bash
-    git clone https://github.com/Fapzarz/FilmTranslatorGenerator.git
-    cd FilmTranslatorGenerator
-    ```
-2.  **(Recommended) Create and activate virtual environment:**
-    ```bash
-    # Windows
-    python -m venv venv
-    .\venv\Scripts\activate
-    ```
-    ```bash
-    # macOS / Linux
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-3.  **Install Python dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  **Ensure `ffmpeg` is installed** and its path is correct in your system environment variables
-5.  **Ensure CUDA Toolkit and cuDNN are installed** correctly if you want to use GPU acceleration (highly recommended for large models)
+### 🎬 **Video Processing**
+- **Batch processing** - Add, remove, and process multiple videos sequentially
+- **Queue management** - Organize your workflow efficiently
+- **Project save/load** - Save progress in `.ftgproj` format
+- **Video preview** with integrated subtitle display
 
-### Usage
+### 🎯 **Advanced Transcription**
+- **Faster-Whisper models** (`tiny` to `large-v3`)
+- **GPU acceleration** with CUDA support
+- **Flexible compute types** (`float16`, `int8`, etc.)
+- **Automatic device detection** and optimization
 
-1.  Run the application:
-    ```bash
-    python main.py
-    ```
-2.  In the application window:
-    *   Click "Add Video(s)" to select your video file(s)
-    *   Select your preferred translation provider (Gemini, OpenAI, Anthropic, or DeepSeek)
-    *   Enter the API Key for your selected provider
-    *   If applicable, select the specific model for your provider
-    *   Select the target translation language and output format
-    *   Select Whisper settings (Model, Device, Compute Type)
-    *   Click "Generate Subtitles"
-3.  Wait for the transcription and translation process to complete. Status will be displayed in the "Log" tab
-    *   *Note:* Downloading the Faster-Whisper model may take a long time when run for the first time
-4.  Once complete, you can view the results in the "Output" tab and compare the original text with the translation in the "Original vs Translation" tab
-5.  Use the "Save As" button to save the results to a file
+### 🌍 **Multi-Provider Translation**
+Choose from industry-leading AI providers:
 
-### Code Structure
+| Provider | Models | Features |
+|----------|--------|----------|
+| **🤖 Google Gemini** | `gemini-2.5-flash`, `gemini-2.5-pro` | Fast processing, high quality |
+| **🧠 OpenAI** | GPT-4.1, GPT-4o, GPT-3.5-turbo | State-of-the-art language models |
+| **🎭 Anthropic** | Claude 4 series, Claude 3.5 Sonnet | Advanced reasoning capabilities |
+| **🔥 DeepSeek** | `deepseek-chat` | Cost-effective alternative |
+| **🏠 Local Models** | HuggingFace, MarianMT | Privacy-focused, offline processing |
 
-This project uses a modular structure to facilitate development and maintenance:
+### 📝 **Subtitle Management**
+- **Advanced subtitle editor** with millisecond precision
+- **Multiple formats** - SRT, VTT, TXT output
+- **Style customization** - Fonts, colors, positioning
+- **Side-by-side comparison** - Original vs translated text
+- **Real-time preview** - See changes instantly
 
-*   `main.py`: Application entry point
-*   `config.py`: Configuration settings and constants
-*   `utils/`: Formatting and media handling utilities
-*   `backend/`: Transcription and translation functionality
-*   `gui/`: UI components and main application class
+### 🔒 **Security & Configuration**
+- **Encrypted API key storage** with machine-specific encryption
+- **Comprehensive settings** saved in `config.json`
+- **Keyboard shortcuts** for power users
+- **Batch size optimization** for performance tuning
 
-### License
+---
 
-This project is licensed under the [GNU Affero General Public License v3 (AGPLv3)](LICENSE).
+## 🛠️ Requirements
 
-### Changelog
+### System Requirements
+- **Python 3.8+** 🐍
+- **Operating System**: Windows 10+, macOS 10.14+, Linux
+- **Memory**: 4GB RAM minimum (8GB+ recommended for large models)
+- **Storage**: 2GB+ free space for models and cache
 
-For a detailed history of changes, please see the [CHANGELOG.md](CHANGELOG.md) file.
+### Essential Dependencies
+```bash
+# Core media processing
+ffmpeg                    # Must be in system PATH
 
-### Documentation
+# GPU acceleration (recommended)
+CUDA Toolkit 11.0+       # For GPU-accelerated transcription
+cuDNN                     # Compatible with your CUDA version
+```
 
-More detailed documentation is available in the [GitHub repository](https://github.com/Fapzarz/FilmTranslatorGenerator).
+### API Keys (Choose one or more)
+| Service | Get API Key | Best For |
+|---------|------------|----------|
+| 🤖 **Google Gemini** | [AI Studio](https://aistudio.google.com/app/apikey) | General purpose, fast |
+| 🧠 **OpenAI** | [Platform](https://platform.openai.com/api-keys) | High quality translations |
+| 🎭 **Anthropic** | [Console](https://console.anthropic.com/) | Complex content |
+| 🔥 **DeepSeek** | [Platform](https://platform.deepseek.com/) | Cost-effective |
+| 🏠 **Local Model** | *No key required* | Privacy, offline use |
 
-</details>
+---
 
-<a name="bahasa-indonesia"></a>
+## 📦 Installation
+
+### 1️⃣ Clone Repository
+```bash
+git clone https://github.com/Fapzarz/FilmTranslatorGenerator.git
+cd FilmTranslatorGenerator
+```
+
+### 2️⃣ Create Virtual Environment (Recommended)
+```bash
+# Windows
+python -m venv venv
+.\venv\Scripts\activate
+
+# macOS / Linux
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3️⃣ Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4️⃣ Verify System Dependencies
+- ✅ **FFmpeg**: Download from [ffmpeg.org](https://ffmpeg.org/) and add to PATH
+- ✅ **CUDA** (optional): Install CUDA Toolkit and cuDNN for GPU acceleration
+
+---
+
+## 🚀 Quick Start
+
+### Launch Application
+```bash
+python main.py
+```
+
+### First Run Setup
+1. **🎬 Add Videos** - Click "Add Video(s)" to select your files
+2. **🔑 Configure API** - Choose translation provider and enter API key
+3. **🎯 Select Model** - Pick the appropriate model for your needs
+4. **🌍 Set Language** - Choose target translation language
+5. **⚙️ Configure Whisper** - Select model, device, and compute type
+6. **▶️ Generate** - Click "Generate Subtitles" and wait for completion
+
+---
+
+## 🎯 Usage Guide
+
+### Video Queue Management
+- **➕ Add Videos**: Support for multiple video formats (MP4, AVI, MOV, etc.)
+- **🗑️ Remove Videos**: Select and remove unwanted items
+- **📊 Queue Statistics**: Monitor progress and completion status
+- **💾 Save/Load Projects**: Preserve your workflow state
+
+### Translation Configuration
+```
+Provider Selection → API Key → Model Selection → Language Settings
+```
+
+### Advanced Features
+- **🎨 Subtitle Styling**: Customize appearance with fonts, colors, and positioning
+- **📝 Editor Mode**: Fine-tune timing and text with precision controls
+- **👁️ Preview Mode**: Watch video with generated subtitles
+- **📋 Batch Processing**: Handle multiple files automatically
+
+---
+
+## 🏗️ Project Structure
+
+```
+FilmTranslatorGenerator/
+├── 📁 backend/           # Core processing logic
+│   ├── transcribe.py     # Whisper integration
+│   └── translate.py      # Multi-provider translation
+├── 📁 dialogs/           # UI dialog components
+├── 📁 managers/          # Feature managers
+│   ├── video_processor.py
+│   ├── queue_manager.py
+│   └── project_manager.py
+├── 📁 utils/             # Utilities and helpers
+│   ├── crypto.py         # Security functions
+│   ├── format.py         # Subtitle formatting
+│   └── media.py          # Media handling
+├── 📁 docs/              # HTML documentation
+├── 📄 main.py            # Application entry point
+├── 📄 qt_app.py          # Main Qt application
+├── 📄 config.py          # Configuration constants
+└── 📄 requirements.txt   # Python dependencies
+```
+
+---
+
+## 🔧 Configuration
+
+### Settings Location
+- **Main Config**: `config.json` (auto-created)
+- **Projects**: `.ftgproj` files (save/load workflow state)
+
+### Key Configuration Options
+```json
+{
+  "translation_provider": "Gemini",
+  "whisper_model": "large-v2",
+  "device": "cuda",
+  "theme": "dark",
+  "batch_size": 500,
+  "output_format": "srt"
+}
+```
+
+### Security Features
+- 🔐 **API keys encrypted** with machine-specific keys
+- 🛡️ **Zero-configuration security** - works out of the box
+- 🔒 **No data transmission** - keys stay on your machine
+
+---
+
+## 📚 Documentation
+
+Comprehensive documentation available:
+
+- 📖 **[User Guide](docs/index.html)** - Complete usage instructions
+- 🔧 **[API Configuration](docs/api.html)** - Setup guides for all providers  
+- 🚀 **[Advanced Features](docs/advanced.html)** - Power user features
+- 🔍 **[Troubleshooting](docs/troubleshooting.html)** - Common issues and solutions
+
+---
+
+## 📝 License
+
+This project is licensed under the **GNU Affero General Public License v3 (AGPLv3)**.
+
+- ✅ **Free to use** for personal and commercial projects
+- ✅ **Open source** - contribute and modify
+- ✅ **Copyleft** - derivative works must also be open source
+
+See the [LICENSE](LICENSE) file for full details.
+
+---
+
+## 🔄 Changelog
+
+For detailed release history and changes, see [CHANGELOG.md](CHANGELOG.md).
+
+### Latest Release - v3.1.0
+- 🆕 Version bump to 3.1.0
+- 📖 Modernized documentation
+- ✨ Improved README structure
+
+---
+
+<div align="center">
+
+### 🌟 **Made with ❤️ for the content creation community**
+
+[🏠 Home](https://github.com/Fapzarz/FilmTranslatorGenerator) • [📚 Docs](docs/) • [🐛 Issues](https://github.com/Fapzarz/FilmTranslatorGenerator/issues) • [💡 Features](https://github.com/Fapzarz/FilmTranslatorGenerator/discussions)
+
+</div>
+
+---
+
+## 🌏 Bahasa Indonesia
+
 <details>
-<summary><strong>Bahasa Indonesia</strong></summary>
+<summary><strong>Klik untuk melihat dokumentasi dalam Bahasa Indonesia</strong></summary>
 
 ## Deskripsi
 
-Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunakan Faster-Whisper dan menerjemahkan teksnya menggunakan Google Gemini API untuk menghasilkan file subtitle dalam berbagai format.
+Aplikasi desktop modern untuk transkripsi video otomatis dan terjemahan menggunakan AI terdepan.
 
-### Fitur
+### ✨ Fitur Utama
 
-*   Antarmuka pengguna modern dengan tema Sun Valley (sv-ttk) dan tata letak berbasis panel
-*   **Manajemen Antrean Video**: Tambah, hapus, dan proses beberapa file video secara berurutan.
-*   **Simpan/Muat Proyek**: Simpan antrean saat ini, data yang telah diproses, dan pengaturan ke dalam file `.ftgproj` dan muat kembali nanti.
-*   **Editor Subtitle Dasar**: Edit teks dan stempel waktu dari subtitle yang dihasilkan langsung di dalam aplikasi.
-*   **Pratinjau Video dengan Subtitle**: Coba buka video yang dipilih beserta subtitle yang dihasilkan di pemutar media default Anda.
-*   **Dukungan Berbagai API Terjemahan**: Pilih antara Google Gemini, OpenAI, Anthropic Claude, DeepSeek, atau model lokal HuggingFace untuk terjemahan.
-*   **Pemilihan Model untuk Provider**: 
-    *   Pilih model spesifik untuk Gemini (`gemini-2.5-flash-preview-04-17` atau `gemini-2.5-pro-exp-03-25`)
-    *   Pilih dari model OpenAI (GPT-4.1, GPT-4o, dll.)
-    *   Pilih model Anthropic (Claude 3 Opus, Claude 3.5 Sonnet, dll.)
-*   Pratinjau video dengan thumbnail dan informasi
-*   **Multiple Output Format Support:** Pilih antara format `SRT`, `VTT`, atau `TXT`
-*   **Perbandingan Side-by-Side:** Lihat teks asli dan terjemahan secara berdampingan
-*   **Pilihan Model Whisper:** Pilih antara `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3`
-*   **Pilihan Perangkat & Komputasi:** Pilih `cuda` atau `cpu` dan tipe komputasi yang sesuai (`float16`, `int8`, dll.)
-*   **Pengaturan Lanjutan Gemini API**: Kustomisasi Temperature, Top-P, dan Top-K untuk terjemahan.
-*   **Pengaturan Lanjutan:** Atur ukuran batch, tema, warna aksen, dan fitur otomatis
-*   **Modular Structure:** Kode diatur dalam modul terpisah untuk memudahkan pengembangan
-*   Transkripsi video menggunakan Faster-Whisper
-*   Terjemahan teks menggunakan berbagai provider AI:
-    * Google Gemini API:
-      * `gemini-2.5-flash-preview-04-17` (pemrosesan lebih cepat)
-      * `gemini-2.5-pro-exp-03-25` (kualitas lebih tinggi untuk terjemahan kompleks)
-    * OpenAI API (GPT-4.1, GPT-4o, GPT-3.5-turbo, dll.)
-    * Anthropic API (Claude 3 Opus, Claude 3.5 Sonnet, dll.)
-    * DeepSeek API (melalui DeepSeek-chat)
-    * Model lokal HuggingFace (MarianMT/Argos Translate)
-*   Penyimpanan pengaturan yang komprehensif di `config.json`
+- 🎨 **Antarmuka Modern** dengan tema Sun Valley dan tata letak panel
+- 🎬 **Pemrosesan Batch** - Kelola multiple video secara berurutan  
+- 💾 **Simpan/Muat Proyek** - Simpan progress dalam format `.ftgproj`
+- 📝 **Editor Subtitle Lanjutan** - Edit dengan presisi milidetik
+- 👁️ **Preview Video** dengan subtitle terintegrasi
+- 🌍 **Multi-Provider AI** - Gemini, OpenAI, Anthropic, DeepSeek, Local
+- 🔒 **Keamanan API Key** - Enkripsi otomatis dengan kunci spesifik mesin
 
-### Persyaratan
+### 🛠️ Persyaratan
 
-*   Python 3.8+
-*   `ffmpeg` (Harus terinstal dan ada di PATH sistem Anda. Unduh dari [https://ffmpeg.org/](https://ffmpeg.org/))
-*   CUDA Toolkit & cuDNN (Direkomendasikan untuk akselerasi GPU dengan Faster-Whisper. Pastikan versi kompatibel terinstal)
-*   API Keys (Pilih setidaknya satu berdasarkan provider terjemahan yang Anda inginkan):
-*   Google Gemini API Key (Dapatkan dari [Google AI Studio](https://aistudio.google.com/app/apikey))
-    *   OpenAI API Key (Dapatkan dari [OpenAI Platform](https://platform.openai.com/api-keys))
-    *   Anthropic API Key (Dapatkan dari [Anthropic Console](https://console.anthropic.com/))
-    *   DeepSeek API Key (Dapatkan dari [DeepSeek Platform](https://platform.deepseek.com/))
-    *   File model lokal dari HuggingFace (tidak memerlukan API key)
+- **Python 3.8+** 
+- **FFmpeg** (harus ada di PATH sistem)
+- **CUDA Toolkit & cuDNN** (opsional, untuk akselerasi GPU)
+- **API Key** dari provider pilihan Anda
 
-### Instalasi
+### 📦 Instalasi
 
-1.  **Clone repository:**
-    ```bash
-    git clone https://github.com/Fapzarz/FilmTranslatorGenerator.git
-    cd FilmTranslatorGenerator
-    ```
-2.  **(Direkomendasikan) Buat dan aktifkan virtual environment:**
-    ```bash
-    # Windows
-    python -m venv venv
-    .\venv\Scripts\activate
-    ```
-    ```bash
-    # macOS / Linux
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-3.  **Instal dependensi Python:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  **Pastikan `ffmpeg` terinstal** dan path-nya sudah benar di environment variable sistem Anda
-5.  **Pastikan CUDA Toolkit dan cuDNN terinstal** dengan benar jika Anda ingin menggunakan akselerasi GPU (sangat direkomendasikan untuk model besar)
+```bash
+# Clone repository
+git clone https://github.com/Fapzarz/FilmTranslatorGenerator.git
+cd FilmTranslatorGenerator
 
-### Penggunaan
+# Buat virtual environment (Windows)
+python -m venv venv
+.\venv\Scripts\activate
 
-1.  Jalankan aplikasi:
-    ```bash
-    python main.py
-    ```
-2.  Di jendela aplikasi:
-    *   Klik "Add Video(s)" untuk menambahkan file video ke antrean
-    *   Pilih provider terjemahan yang Anda inginkan (Gemini, OpenAI, Anthropic, atau DeepSeek)
-    *   Masukkan API Key untuk provider yang Anda pilih
-    *   Jika diperlukan, pilih model spesifik untuk provider Anda
-    *   Pilih bahasa target terjemahan dan format output
-    *   Pilih pengaturan Whisper (Model, Device, Compute Type)
-    *   Klik "Generate Subtitles"
-3.  Tunggu proses transkripsi dan terjemahan selesai. Status akan ditampilkan di tab "Log"
-    *   *Catatan:* Pengunduhan model Faster-Whisper mungkin memakan waktu lama saat pertama kali dijalankan
-4.  Setelah selesai, Anda dapat melihat hasil di tab "Output" dan membandingkan teks asli dengan terjemahan di tab "Original vs Translation"
-5.  Gunakan tombol "Save As" untuk menyimpan hasil ke file
+# Install dependencies
+pip install -r requirements.txt
+```
 
-### Struktur Kode
+### 🚀 Penggunaan
 
-Proyek ini menggunakan struktur modular untuk memudahkan pengembangan dan pemeliharaan:
+```bash
+python main.py
+```
 
-*   `main.py`: Entry point aplikasi
-*   `config.py`: Pengaturan konfigurasi dan konstanta
-*   `utils/`: Utilitas pemformatan dan penanganan media
-*   `backend/`: Fungsionalitas transkripsi dan terjemahan
-*   `gui/`: UI components and main application class
+1. **Tambah Video** - Klik "Add Video(s)" untuk memilih file
+2. **Pilih Provider** - Pilih provider terjemahan (Gemini, OpenAI, dll)
+3. **Masukkan API Key** - Input API key untuk provider yang dipilih
+4. **Atur Bahasa** - Pilih bahasa target terjemahan
+5. **Konfig Whisper** - Pilih model, device, dan compute type
+6. **Generate** - Klik "Generate Subtitles"
 
-### Lisensi
+### 🏗️ Struktur Proyek
 
-Proyek ini dilisensikan di bawah [GNU Affero General Public License v3 (AGPLv3)](LICENSE).
+```
+FilmTranslatorGenerator/
+├── backend/        # Logic pemrosesan inti
+├── dialogs/        # Komponen dialog UI
+├── managers/       # Manager fitur
+├── utils/          # Utilitas dan helper
+├── docs/           # Dokumentasi HTML
+├── main.py         # Entry point aplikasi
+└── qt_app.py       # Aplikasi Qt utama
+```
 
-### Changelog
+### 📚 Dokumentasi
 
-Untuk riwayat perubahan yang detail, silakan lihat file [CHANGELOG.md](CHANGELOG.md).
+Dokumentasi lengkap tersedia dalam folder `docs/`:
+- **Panduan Pengguna** - Instruksi penggunaan lengkap
+- **Konfigurasi API** - Setup untuk semua provider
+- **Fitur Lanjutan** - Fitur untuk power user
+- **Troubleshooting** - Solusi masalah umum
 
-### Dokumentasi
+### 📝 Lisensi
 
-Dokumentasi lebih lengkap tersedia di [GitHub repository](https://github.com/Fapzarz/FilmTranslatorGenerator).
+Proyek ini dilisensikan di bawah **GNU Affero General Public License v3 (AGPLv3)**.
 
 </details>
