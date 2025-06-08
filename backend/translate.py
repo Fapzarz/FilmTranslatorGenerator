@@ -6,8 +6,8 @@ import google.generativeai as genai
 import openai # Import OpenAI library
 import anthropic # Import Anthropic library
 from config import (
-    DEFAULT_BATCH_SIZE, 
-    OPENAI_MODELS, 
+    DEFAULT_BATCH_SIZE,
+    OPENAI_MODELS,
     ANTHROPIC_MODELS, # Added ANTHROPIC_MODELS
     DEEPSEEK_MODEL # Added DEEPSEEK_MODEL
 )
@@ -87,6 +87,28 @@ def validate_anthropic_key(api_key, status_callback):
     except Exception as e: # Catch any other unexpected errors
         error_message = f"Anthropic Key Validation Error: {str(e)}"
         status_callback(error_message, "ERROR")
+        return False, f"Validation Error: {str(e)[:100]}"
+
+def validate_deepseek_key(api_key, status_callback):
+    """Validates the DeepSeek API key by trying to list available models."""
+    if not api_key:
+        return False, "API Key is empty."
+    try:
+        from deepseek import DeepSeekAPI
+    except ImportError:
+        status_callback("DeepSeek Python package not installed.", "ERROR")
+        return False, "Package missing."
+    try:
+        client = DeepSeekAPI(api_key=api_key)
+        models = client.get_models()
+        if not models:
+            return False, "Key configured, but no models found."
+        status_callback("DeepSeek API Key appears valid (models listed).", "VERBOSE")
+        return True, "Valid"
+    except Exception as e:
+        status_callback(f"DeepSeek Key Validation Error: {e}", "ERROR")
+        if "401" in str(e) or "Unauthorized" in str(e):
+            return False, "Invalid API Key."
         return False, f"Validation Error: {str(e)[:100]}"
 
 # --- End API Key Validation Functions ---
@@ -507,14 +529,19 @@ def translate_text(provider_config, text_segments, target_language, status_callb
         
         elif provider_name == "DeepSeek":
             deepseek_api_key = provider_config.get('deepseek_api_key')
-            
+
             if not deepseek_api_key:
                 status_callback("Error: DeepSeek API key is missing.", "ERROR")
                 return None
-            
+
+            valid, message = validate_deepseek_key(deepseek_api_key, status_callback)
+            if not valid:
+                status_callback(f"Invalid DeepSeek API key: {message}", "ERROR")
+                return None
+
             status_callback(f"Starting translation with DeepSeek model to {target_language}...", "INFO")
             return _translate_with_deepseek(
-                deepseek_api_key, text_segments, target_language, 
+                deepseek_api_key, text_segments, target_language,
                 status_callback, batch_size
             )
         

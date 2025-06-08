@@ -571,8 +571,8 @@ class AdvancedSettingsDialog(QDialog):
         self.deepseek_validate_button.setText("Validating...")
         
         def validation_thread_task():
-            valid = True  # Placeholder, no validation for DeepSeek yet
-            message = "DeepSeek key validation not implemented yet."
+            from backend.translate import validate_deepseek_key
+            valid, message = validate_deepseek_key(api_key, self.app.log_status)
             
             # Update UI in main thread
             from PySide6.QtCore import QMetaObject, Qt, Q_ARG

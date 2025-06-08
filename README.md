@@ -18,6 +18,7 @@ A simple desktop application for transcribing audio from video files using Faste
 *   **Basic Subtitle Editor**: Edit the text and timestamps of generated subtitles directly within the application.
 *   **Preview Video with Subtitles**: Attempt to open the selected video with its generated subtitles in your default media player.
 *   **Multiple Translation API Support**: Choose between Google Gemini, OpenAI, Anthropic Claude, and DeepSeek for translations.
+*   **API Key Validation**: Built-in checks verify Gemini, OpenAI, Anthropic, and DeepSeek keys before use.
 *   **Model Selection for Providers**: 
     *   Select specific models for Gemini (`gemini-2.5-flash-preview-04-17` or `gemini-2.5-pro-exp-03-25`)
     *   Choose from OpenAI models (GPT-4.1, GPT-4o, etc.) 
