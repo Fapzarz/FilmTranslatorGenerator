@@ -321,7 +321,10 @@ class VideoProcessor:
                     'openai_model': self.app.openai_model,
                     'anthropic_api_key': self.app.anthropic_api_key,
                     'anthropic_model': self.app.anthropic_model,
-                    'deepseek_api_key': self.app.deepseek_api_key
+                    'deepseek_api_key': self.app.deepseek_api_key,
+                    'local_model_path': self.app.local_model_path,
+                    'local_model_source_lang': self.app.local_model_source_lang,
+                    'local_model_target_lang': self.app.local_model_target_lang
                     # DeepSeek model is fixed, no var needed here for the call itself
                 }
                 

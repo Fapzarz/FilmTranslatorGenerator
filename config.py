@@ -15,7 +15,7 @@ COMPUTE_TYPES = {
     "cuda": ["float16", "int8_float16", "int8"],  # Common types for CUDA
     "cpu": ["int8", "float32"]  # Common types for CPU
 }
-TRANSLATION_PROVIDERS = ["Gemini", "OpenAI", "Anthropic", "DeepSeek"]
+TRANSLATION_PROVIDERS = ["Gemini", "OpenAI", "Anthropic", "DeepSeek", "Local Model"]
 OPENAI_MODELS = [
     # family GPT-4.1 – flagship terkini (rilis 14 Apr 2025)
     "gpt-4.1",
@@ -137,7 +137,10 @@ def get_default_config():
         'deepseek_api_key': DEFAULT_DEEPSEEK_API_KEY,
         'openai_model': DEFAULT_OPENAI_MODEL,
         'anthropic_model': DEFAULT_ANTHROPIC_MODEL,
-        'gemini_model': DEFAULT_GEMINI_MODEL, 
+        'gemini_model': DEFAULT_GEMINI_MODEL,
+        'local_model_path': '',
+        'local_model_source_lang': 'en',
+        'local_model_target_lang': 'id',
         'target_language': 'English',
         'whisper_model': 'large-v2',
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',

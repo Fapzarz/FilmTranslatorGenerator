@@ -98,6 +98,9 @@ class QtAppGUI(QMainWindow):
         self.gemini_temperature = 0.7
         self.gemini_top_p = 0.9
         self.gemini_top_k = 40
+        self.local_model_path = ""
+        self.local_model_source_lang = "en"
+        self.local_model_target_lang = "id"
         
         # Initialize default values for subtitle styling
         self.subtitle_font = "Arial"
@@ -572,6 +575,9 @@ class QtAppGUI(QMainWindow):
             self.gemini_model = config.get('gemini_model', self.gemini_model)
             self.openai_model = config.get('openai_model', self.openai_model)
             self.anthropic_model = config.get('anthropic_model', self.anthropic_model)
+            self.local_model_path = config.get('local_model_path', self.local_model_path)
+            self.local_model_source_lang = config.get('local_model_source_lang', self.local_model_source_lang)
+            self.local_model_target_lang = config.get('local_model_target_lang', self.local_model_target_lang)
             
             # Load Gemini model parameters
             self.gemini_temperature = config.get('gemini_temperature', self.gemini_temperature)
@@ -641,6 +647,9 @@ class QtAppGUI(QMainWindow):
                 'gemini_model': self.gemini_model,
                 'openai_model': self.openai_model,
                 'anthropic_model': self.anthropic_model,
+                'local_model_path': self.local_model_path,
+                'local_model_source_lang': self.local_model_source_lang,
+                'local_model_target_lang': self.local_model_target_lang,
                 'gemini_temperature': self.gemini_temperature,
                 'gemini_top_p': self.gemini_top_p,
                 'gemini_top_k': self.gemini_top_k,
