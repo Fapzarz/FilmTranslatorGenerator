@@ -17,7 +17,7 @@ A simple desktop application for transcribing audio from video files using Faste
 *   **Project Save/Load**: Save your current queue, processed data, and settings into a `.ftgproj` file and load it back later.
 *   **Basic Subtitle Editor**: Edit the text and timestamps of generated subtitles directly within the application.
 *   **Preview Video with Subtitles**: Attempt to open the selected video with its generated subtitles in your default media player.
-*   **Multiple Translation API Support**: Choose between Google Gemini, OpenAI, Anthropic Claude, and DeepSeek for translations.
+*   **Multiple Translation API Support**: Choose between Google Gemini, OpenAI, Anthropic Claude, DeepSeek, or a local HuggingFace model for translations.
 *   **Model Selection for Providers**: 
     *   Select specific models for Gemini (`gemini-2.5-flash-preview-04-17` or `gemini-2.5-pro-exp-03-25`)
     *   Choose from OpenAI models (GPT-4.1, GPT-4o, etc.) 
@@ -38,6 +38,7 @@ A simple desktop application for transcribing audio from video files using Faste
     * OpenAI API (GPT-4.1, GPT-4o, GPT-3.5-turbo, etc.)
     * Anthropic API (Claude 3 Opus, Claude 3.5 Sonnet, etc.)
     * DeepSeek API (via DeepSeek-chat)
+    * Local model via HuggingFace (MarianMT/Argos Translate)
 *   Comprehensive settings storage in `config.json`
 
 ### Requirements
@@ -45,11 +46,12 @@ A simple desktop application for transcribing audio from video files using Faste
 *   Python 3.8+
 *   `ffmpeg` (Must be installed and in your system PATH. Download from [https://ffmpeg.org/](https://ffmpeg.org/))
 *   CUDA Toolkit & cuDNN (Recommended for GPU acceleration with Faster-Whisper. Ensure compatible versions are installed)
-*   API Keys (Choose at least one based on your preferred translation provider):
+*   API Keys (Choose at least one based on your preferred translation provider, or use a local model):
 *   Google Gemini API Key (Get from [Google AI Studio](https://aistudio.google.com/app/apikey))
     *   OpenAI API Key (Get from [OpenAI Platform](https://platform.openai.com/api-keys))
     *   Anthropic API Key (Get from [Anthropic Console](https://console.anthropic.com/))
     *   DeepSeek API Key (Get from [DeepSeek Platform](https://platform.deepseek.com/))
+    *   Local model files downloaded from HuggingFace (no API key required)
 
 ### Installation
 
@@ -134,7 +136,7 @@ Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunaka
 *   **Simpan/Muat Proyek**: Simpan antrean saat ini, data yang telah diproses, dan pengaturan ke dalam file `.ftgproj` dan muat kembali nanti.
 *   **Editor Subtitle Dasar**: Edit teks dan stempel waktu dari subtitle yang dihasilkan langsung di dalam aplikasi.
 *   **Pratinjau Video dengan Subtitle**: Coba buka video yang dipilih beserta subtitle yang dihasilkan di pemutar media default Anda.
-*   **Dukungan Berbagai API Terjemahan**: Pilih antara Google Gemini, OpenAI, Anthropic Claude, dan DeepSeek untuk terjemahan.
+*   **Dukungan Berbagai API Terjemahan**: Pilih antara Google Gemini, OpenAI, Anthropic Claude, DeepSeek, atau model lokal HuggingFace untuk terjemahan.
 *   **Pemilihan Model untuk Provider**: 
     *   Pilih model spesifik untuk Gemini (`gemini-2.5-flash-preview-04-17` atau `gemini-2.5-pro-exp-03-25`)
     *   Pilih dari model OpenAI (GPT-4.1, GPT-4o, dll.)
@@ -153,8 +155,9 @@ Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunaka
       * `gemini-2.5-flash-preview-04-17` (pemrosesan lebih cepat)
       * `gemini-2.5-pro-exp-03-25` (kualitas lebih tinggi untuk terjemahan kompleks)
     * OpenAI API (GPT-4.1, GPT-4o, GPT-3.5-turbo, dll.)
-    * Anthropic API (Claude 3 Opus, Claude 3.5 Sonnet, dll.) 
+    * Anthropic API (Claude 3 Opus, Claude 3.5 Sonnet, dll.)
     * DeepSeek API (melalui DeepSeek-chat)
+    * Model lokal HuggingFace (MarianMT/Argos Translate)
 *   Penyimpanan pengaturan yang komprehensif di `config.json`
 
 ### Persyaratan
@@ -167,6 +170,7 @@ Aplikasi desktop sederhana untuk mentranskripsi audio dari file video menggunaka
     *   OpenAI API Key (Dapatkan dari [OpenAI Platform](https://platform.openai.com/api-keys))
     *   Anthropic API Key (Dapatkan dari [Anthropic Console](https://console.anthropic.com/))
     *   DeepSeek API Key (Dapatkan dari [DeepSeek Platform](https://platform.deepseek.com/))
+    *   File model lokal dari HuggingFace (tidak memerlukan API key)
 
 ### Instalasi
 

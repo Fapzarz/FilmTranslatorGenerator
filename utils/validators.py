@@ -28,6 +28,16 @@ def validate_path_exists(path):
     except Exception as e:
         return False, f"Invalid path format: {e}"
 
+def validate_local_model_directory(path):
+    """Validate local translation model directory."""
+    valid, error = validate_path_exists(path)
+    if not valid:
+        return valid, error
+    required_file = Path(path) / "config.json"
+    if not required_file.exists():
+        return False, "Model directory must contain config.json"
+    return True, ""
+
 def validate_file_extension(filepath, allowed_extensions):
     """
     Validate that a file has an allowed extension.

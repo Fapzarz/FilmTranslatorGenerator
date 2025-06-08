@@ -425,7 +425,58 @@ def _translate_with_anthropic(anthropic_api_key, anthropic_model_name, text_segm
             })
     
     status_callback("Anthropic translation finished.", level="INFO")
-    return translated_segments 
+    return translated_segments
+
+def _translate_with_local_model(model_path, text_segments, source_lang, target_lang, status_callback, batch_size_setting, cancel_callback=None):
+    """Translate text segments using a local HuggingFace model."""
+    if not model_path:
+        status_callback("Error: Local model path is missing.", level="ERROR")
+        return None
+
+    try:
+        from transformers import pipeline
+        translator = pipeline("translation", model=model_path)
+        status_callback(f"Loaded local model from {model_path}. Translating to {target_lang}...", level="INFO")
+    except Exception as e:
+        status_callback(f"Error loading local model: {e}", level="ERROR")
+        return None
+
+    translated_segments = []
+    total_segments = len(text_segments)
+
+    for i, segment in enumerate(text_segments):
+        if cancel_callback and cancel_callback():
+            status_callback("Translation cancelled by user.", "WARNING")
+            return None
+
+        status_callback(f"Processing segment {i+1}/{total_segments} with local model...", level="INFO")
+        text_to_translate = segment['text'].strip()
+        if not text_to_translate:
+            translated_segments.append({'start': segment['start'], 'end': segment['end'], 'text': ''})
+            continue
+
+        try:
+            result = translator(text_to_translate, src_lang=source_lang, tgt_lang=target_lang)[0]
+            translated_text = result.get('translation_text', '').strip()
+        except TypeError:
+            try:
+                result = translator(text_to_translate)[0]
+                translated_text = result.get('translation_text', '').strip()
+            except Exception as e_individual:
+                status_callback(f"Error translating segment {i+1}: {e_individual}", level="ERROR")
+                translated_text = f"[Translation Error] {text_to_translate}"
+        except Exception as e_seg:
+            status_callback(f"Error translating segment {i+1}: {e_seg}", level="ERROR")
+            translated_text = f"[Translation Error] {text_to_translate}"
+
+        translated_segments.append({
+            'start': segment['start'],
+            'end': segment['end'],
+            'text': translated_text
+        })
+
+    status_callback("Local model translation finished.", level="INFO")
+    return translated_segments
 
 def translate_text(provider_config, text_segments, target_language, status_callback=None, batch_size_setting=None, cancel_callback=None):
     """
@@ -514,13 +565,19 @@ def translate_text(provider_config, text_segments, target_language, status_callb
             
             status_callback(f"Starting translation with DeepSeek model to {target_language}...", "INFO")
             return _translate_with_deepseek(
-                deepseek_api_key, text_segments, target_language, 
+                deepseek_api_key, text_segments, target_language,
                 status_callback, batch_size
             )
-        
+
         elif provider_name == "Local Model":
-            status_callback("Local model translation not yet implemented.", "ERROR")
-            return None
+            model_path = provider_config.get('local_model_path')
+            source_lang = provider_config.get('local_model_source_lang', 'en')
+            target_lang = provider_config.get('local_model_target_lang', target_language)
+            status_callback(f"Starting translation with local model at {model_path}...", "INFO")
+            return _translate_with_local_model(
+                model_path, text_segments, source_lang, target_lang,
+                status_callback, batch_size, cancel_callback
+            )
         
         else:
             status_callback(f"Unknown translation provider: {provider_name}", "ERROR")

@@ -5,7 +5,8 @@ import os
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
                               QWidget, QLabel, QLineEdit, QComboBox, QCheckBox,
                               QPushButton, QGroupBox, QFormLayout, QSpinBox,
-                              QDoubleSpinBox, QSlider, QMessageBox, QFrame)
+                              QDoubleSpinBox, QSlider, QMessageBox, QFrame,
+                              QFileDialog)
 from PySide6.QtCore import Qt, Signal, Slot
 
 from config import (
@@ -243,13 +244,32 @@ class AdvancedSettingsDialog(QDialog):
         """Set up local model-specific settings."""
         self.local_model_settings = QGroupBox("Local Model Settings")
         form_layout = QFormLayout()
-        
-        label = QLabel("Local model support not yet implemented.")
-        form_layout.addRow(label)
-        
+
+        path_layout = QHBoxLayout()
+        self.local_model_path = QLineEdit()
+        self.local_model_path.setPlaceholderText("Path to HuggingFace model")
+        browse_btn = QPushButton("Browse")
+        browse_btn.clicked.connect(self.browse_local_model)
+        path_layout.addWidget(self.local_model_path)
+        path_layout.addWidget(browse_btn)
+        form_layout.addRow("Model Path:", path_layout)
+
+        self.local_model_source_lang = QLineEdit()
+        self.local_model_source_lang.setPlaceholderText("e.g., en")
+        form_layout.addRow("Source Lang:", self.local_model_source_lang)
+
+        self.local_model_target_lang = QLineEdit()
+        self.local_model_target_lang.setPlaceholderText("e.g., id")
+        form_layout.addRow("Target Lang:", self.local_model_target_lang)
+
         self.local_model_settings.setLayout(form_layout)
         self.provider_settings_layout.addWidget(self.local_model_settings)
         self.local_model_settings.hide()
+
+    def browse_local_model(self):
+        directory = QFileDialog.getExistingDirectory(self, "Select Model Directory")
+        if directory:
+            self.local_model_path.setText(directory)
     
     def setup_transcription_tab(self):
         """Set up the transcription tab."""
@@ -347,6 +367,11 @@ class AdvancedSettingsDialog(QDialog):
         
         # DeepSeek settings
         self.deepseek_api_key.setText(self.app.deepseek_api_key)
+
+        # Local Model settings
+        self.local_model_path.setText(self.app.local_model_path)
+        self.local_model_source_lang.setText(self.app.local_model_source_lang)
+        self.local_model_target_lang.setText(self.app.local_model_target_lang)
         
         # Transcription settings
         self.batch_size.setValue(self.app.batch_size)
@@ -444,6 +469,11 @@ class AdvancedSettingsDialog(QDialog):
         
         # DeepSeek settings
         self.app.deepseek_api_key = self.deepseek_api_key.text()
+
+        # Local Model settings
+        self.app.local_model_path = self.local_model_path.text()
+        self.app.local_model_source_lang = self.local_model_source_lang.text()
+        self.app.local_model_target_lang = self.local_model_target_lang.text()
         
         # Transcription settings
         self.app.batch_size = self.batch_size.value()
